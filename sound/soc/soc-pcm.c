@@ -463,13 +463,16 @@ static void soc_pcm_init_runtime_hw(struct snd_pcm_substream *substream)
 	hw->rate_max = min_not_zero(hw->rate_max, rate_max);
 }
 
-static int soc_pcm_components_open(struct snd_pcm_substream *substream)
+static int soc_pcm_components_open(struct snd_pcm_substream *substream,
+				   struct snd_soc_component **last)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_component *component;
 	int i, ret = 0;
 
 	for_each_rtd_components(rtd, i, component) {
+		*last = component;
+
 		ret = snd_soc_component_module_get_when_open(component);
 		if (ret < 0) {
 			dev_err(component->dev,
@@ -486,17 +489,21 @@ static int soc_pcm_components_open(struct snd_pcm_substream *substream)
 			return ret;
 		}
 	}
-
+	*last = NULL;
 	return 0;
 }
 
-static int soc_pcm_components_close(struct snd_pcm_substream *substream)
+static int soc_pcm_components_close(struct snd_pcm_substream *substream,
+				    struct snd_soc_component *last)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_component *component;
 	int i, r, ret = 0;
 
 	for_each_rtd_components(rtd, i, component) {
+		if (component == last)
+			break;
+
 		r = snd_soc_component_close(component, substream);
 		if (r < 0)
 			ret = r; /* use last ret */
@@ -538,7 +545,7 @@ static int soc_pcm_open(struct snd_pcm_substream *substream)
 		goto out;
 	}
 
-	ret = soc_pcm_components_open(substream);
+	ret = soc_pcm_components_open(substream, &component);
 	if (ret < 0)
 		goto component_err;
 
@@ -635,7 +642,7 @@ codec_dai_err:
 		snd_soc_dai_shutdown(codec_dai, substream);
 
 component_err:
-	soc_pcm_components_close(substream);
+	soc_pcm_components_close(substream, component);
 
 	snd_soc_dai_shutdown(cpu_dai, substream);
 out:
@@ -689,7 +696,7 @@ static int soc_pcm_close(struct snd_pcm_substream *substream)
 
 	soc_rtd_shutdown(rtd, substream);
 
-	soc_pcm_components_close(substream);
+	soc_pcm_components_close(substream, NULL);
 
 	snd_soc_dapm_stream_stop(rtd, substream->stream);
 
