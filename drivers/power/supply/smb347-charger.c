@@ -776,7 +776,7 @@ static irqreturn_t smb347_interrupt(int irq, void *data)
 	 * was connected or disconnected.
 	 */
 	if (irqstat_e & (IRQSTAT_E_USBIN_UV_IRQ | IRQSTAT_E_DCIN_UV_IRQ)) {
-		if (smb347_update_ps_status(smb) > 0) {
+		if (smb347_update_ps_status(smb) >= 0) {
 			smb347_start_stop_charging(smb);
 			if (smb->pdata->use_mains)
 				power_supply_changed(smb->mains);
