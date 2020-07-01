@@ -1,0 +1,45 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * SDM845 Samsung S9 (SM-G9600) (starqltechn) specific device tree
+ *
+ * Copyright (c) 2020, The Linux Foundation. All rights reserved.
+ */
+
+#include "sdm845-samsung-starqltechn.dtsi"
+
+/ {
+	model = "Samsung S9 Mainline";
+	compatible = "qcom,sdm845-mtp", "qcom,sdm845", "qcom,mtp";
+
+	chosen {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+		bootargs = "console=tty1 loglevel=15 clk_ignore_unused PMOS_NO_OUTPUT_REDIRECT";
+		framebuffer: framebuffer@9D400000 {
+			compatible = "simple-framebuffer";
+			reg = <0 0x9D400000 0 (2960 * 1440 * 4)>;//2400000
+			width = <1440>;
+			height = <2960>;
+			stride = <(1440 * 4)>;
+			format = "a8r8g8b8";
+		};
+	};
+
+
+	reserved-memory {
+		framebuffer_region@9d400000 {
+			reg = <0x0 0x9d400000 0x0 0x02400000>;
+			no-map;
+		};
+
+		ramoops@A1300000 {
+			compatible = "ramoops";
+			reg = <0x0 0xa1300000 0x0 0x100000>;
+			record-size = <0x40000>;
+			console-size = <0x40000>;
+			ftrace-size = <0x40000>;
+			pmsg-size = <0x40000>;
+		};
+	};
+};
