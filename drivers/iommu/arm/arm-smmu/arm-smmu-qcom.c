@@ -401,6 +401,7 @@ static const struct arm_smmu_impl qcom_smmu_v2_impl = {
 	.def_domain_type = qcom_smmu_def_domain_type,
 	.write_s2cr = qcom_smmu_write_s2cr,
 	.tlb_sync = qcom_smmu_tlb_sync,
+	.write_sctlr = qcom_adreno_smmu_write_sctlr,
 };
 
 static const struct arm_smmu_impl qcom_smmu_500_impl = {
