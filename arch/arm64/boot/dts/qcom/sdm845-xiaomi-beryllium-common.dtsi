@@ -7,6 +7,9 @@
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 #include <dt-bindings/sound/qcom,q6afe.h>
 #include <dt-bindings/sound/qcom,q6asm.h>
+#include <dt-bindings/sound/qcom,q6afe.h>
+#include <dt-bindings/sound/qcom,q6asm.h>
+#include <dt-bindings/sound/qcom,q6voice.h>
 #include "sdm845.dtsi"
 #include "pm8998.dtsi"
 #include "pmi8998.dtsi"
@@ -423,6 +426,18 @@
 	qcom,wave-play-rate-us = <4878>;
 };
 
+&q6cvp {
+	status = "okay";
+};
+
+&q6cvs {
+	status = "okay";
+};
+
+&q6mvm {
+	status = "okay";
+};
+
 &qupv3_id_0 {
 	status = "okay";
 };
@@ -474,6 +489,13 @@
 		link-name = "MultiMedia3";
 		cpu {
 			sound-dai = <&q6asmdai  MSM_FRONTEND_DAI_MULTIMEDIA3>;
+		};
+	};
+
+	dai-link-voicemmode1 {
+		link-name = "VoiceMMode1";
+		cpu {
+			sound-dai = <&q6voicedai VOICEMMODE1>;
 		};
 	};
 
