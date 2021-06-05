@@ -8,6 +8,9 @@
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 #include <dt-bindings/sound/qcom,q6afe.h>
 #include <dt-bindings/sound/qcom,q6asm.h>
+#include <dt-bindings/sound/qcom,q6afe.h>
+#include <dt-bindings/sound/qcom,q6asm.h>
+#include <dt-bindings/sound/qcom,q6voice.h>
 #include "sdm845.dtsi"
 #include "sdm845-wcd9340.dtsi"
 #include "pm8998.dtsi"
@@ -511,6 +514,13 @@
 		};
 	};
 
+	dai-link-voicemmode1 {
+		link-name = "VoiceMMode1";
+		cpu {
+			sound-dai = <&q6voicedai VOICEMMODE1>;
+		};
+	};
+
 	tas2559-dai-link {
 		link-name = "Primary Spkr Playback";
 
@@ -709,3 +719,15 @@
 	qcom,calibration-variant = "xiaomi_beryllium";
 };
 
+/* qdsp6 hacks */
+&q6cvp {
+	status = "okay";
+};
+
+&q6cvs {
+	status = "okay";
+};
+
+&q6mvm {
+	status = "okay";
+};
