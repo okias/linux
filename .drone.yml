@@ -1,0 +1,43 @@
+---
+kind: pipeline
+name: armv7
+
+platform:
+  os: linux
+  arch: arm
+
+clone:
+  depth: 30000
+
+steps:
+- name: build
+  image: arm32v7/alpine:3.12
+  commands:
+#    - apk add py3-pip # Alpine
+    - apk add git build-base bison findutils flex gmp-dev mpc1-dev mpfr-dev openssl-dev perl # Alpine
+#    - pip3 install -U --user tuxmake
+#    - export PATH=/root/.local/bin:$PATH
+    - git cherry-pick --no-commit 0f84f3ec969d389a9bd77a7314c0a72bcac6fd9f..78d5f8fbf3244aeb76e85b96b5fd07bd3ad52f19
+
+    - git bisect start
+    - git bisect bad 62fb9874f5da54fdb243003b386128037319b219
+    - git bisect good 7bfec074490204bec4a5e3bdfa18bc304c0e3020
+    - git bisect bad 85f3f17b5db2dd9f8a094a0ddc665555135afd22
+    - make qcom_apq8064_defconfig
+    - make -j$(nproc)
+#    - tuxmake --target-arch=arm -k qcom_apq8064_defconfig
+#    - cd /root/.cache/tuxmake/builds/1/
+#    - tar -cf linux-bisect.tar *
+#    - cd -
+#    - mv /root/.cache/tuxmake/builds/1/linux-bisect.tar ./
+- name: publish
+  image: plugins/github-release
+  settings:
+    api_key:
+      from_secret: drone_io
+    files: 'arch/arm/boot/zImage'
+  when:
+    event: tag
+
+trigger:
+  event: [push, pull_request, tag]
