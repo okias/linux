@@ -21,6 +21,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        config:
+          - 'tegra_defconfig'
+          - 'asus-grouper'
+          - 'postmarketos-grate'
+        option:
+          - 'CONFIG_ARM=y' # default
+          - 'CONFIG_THUMB2_KERNEL=y'
         cc: [gcc, clang]
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +48,7 @@ jobs:
         continue-on-error: false
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: ${{ env.KERNEL_NAME }}-${{ matrix.cc }}
+          key: ${{ env.KERNEL_NAME }}-${{ matrix.config }}-${{ matrix.option }}-${{ matrix.cc }}
       - name: Start sccache server
         run: sccache --start-server
       - name: Install dependencies
@@ -49,17 +56,25 @@ jobs:
           sudo apt-get -qq update > /dev/null
           sudo apt-get -qq install -y --no-install-recommends -o=Dpkg::Use-Pty=0 ${{ env.ARCH_SPEC_PKGS }} git build-essential binutils-multiarch device-tree-compiler fakeroot libncurses5-dev libssl-dev bison flex libelf-dev dwarves python3-pip socat > /dev/null
           pip3 install -U --user tuxmake
+      - name: Fetch postmarketos-grate config from main
+        if: ${{ matrix.config == 'postmarketos-grate' }}
+        run: >
+          curl -L -o ${{ matrix.config }} https://gitlab.com/postmarketOS/pmaports/-/raw/master/main/linux-${{ matrix.config }}/config-${{ matrix.config }}.armv7
+      - name: Fetch asus-grouper config from device/testing
+        if: ${{ matrix.config == 'asus-grouper' }}
+        run: >
+          curl -L -o ${{ matrix.config }} https://gitlab.com/postmarketOS/pmaports/-/raw/master/device/testing/linux-${{ matrix.config }}/config-${{ matrix.config }}.armv7
       - name: Build
         run: |
-          tuxmake --directory ./ -w sccache --target-arch=arm -k $KBUILD_DEFCONFIG $TUXMAKE_EXTRA_OPTS | sed "s|^/home/runner/work/linux/linux/|::error::|"
-          tar -cf linux-grate-${{ matrix.cc }}.tar -C /home/runner/.cache/tuxmake/builds/1 .
+          tuxmake --directory ./ -w sccache --target-arch=arm -k ${{ matrix.config }} -K ${{ matrix.option }} $TUXMAKE_EXTRA_OPTS | sed "s|^/home/runner/work/linux/linux/|::error::|"
+          tar -cf linux-grate-${{ matrix.config }}-${{ matrix.cc }}.tar -C /home/runner/.cache/tuxmake/builds/1 .
           export ERRS=`grep "errors" "${BUILD_PATH}"/metadata.json | cut -d":" -f2 | tr -d " ,"`
           export WARNS=`grep "warnings" "${BUILD_PATH}"/metadata.json | cut -d":" -f2 | tr -d " ,"`
-          if [ $ERRS != "0" ]; then
+          if [ "$ERRS" != "0" ]; then
             echo "::error::Compilation failed due to $ERRS errors, please fix them."
             RET=1
           fi
-          if [ $WARNS != "0" ]; then
+          if [ "$WARNS" != "0" ]; then
             echo "::error::$WARNS warnings found, please fix them."
             RET=1
           fi
@@ -72,9 +87,9 @@ jobs:
         if: ${{!startsWith(github.ref, 'refs/pull')}}
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "${{ env.KERNEL_NAME }}-${{ matrix.cc }}"
+          automatic_release_tag: "${{ env.KERNEL_NAME }}-${{ matrix.config }}-${{ matrix.option }}-${{ matrix.cc }}"
           prerelease: true
-          title: "Build of Grate kernel, compiled with ${{ matrix.cc }}"
+          title: "Build of Grate kernel, config ${{ matrix.config }} + ${{ matrix.option }} compiled with ${{ matrix.cc }}"
           files: |
             *.tar
   dtbs:
