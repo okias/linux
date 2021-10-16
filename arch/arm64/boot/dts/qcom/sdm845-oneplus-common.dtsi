@@ -467,6 +467,10 @@
 	qcom,wave-play-rate-us = <4255>;
 };
 
+&pmi8998_charger {
+	status = "okay";
+};
+
 &pmi8998_rradc {
 	status = "okay";
 };
