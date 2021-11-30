@@ -507,6 +507,12 @@
 	firmware-name = "qcom/sdm845/axolotl/mba.mbn", "qcom/sdm845/axolotl/modem.mbn";
 };
 
+&pmi8998_fg {
+	status = "okay";
+	monitored-battery = <&battery>;
+	power-supplies = <&pmi8998_charger>;
+};
+
 &pm8998_gpio {
 	volume_up_gpio: pm8998_gpio6 {
 		pinconf {
@@ -519,6 +525,12 @@
 	};
 };
 
+&pmi8998_haptics {
+	status = "okay";
+
+	qcom,wave-play-rate-us = <4255>;
+};
+
 &pm8998_pon {
 	volume_down_resin: resin {
 		compatible = "qcom,pm8941-resin";
@@ -527,6 +539,15 @@
 		bias-pull-up;
 		linux,code = <KEY_VOLUMEDOWN>;
 	};
+};
+
+&pmi8998_rradc {
+	status = "okay";
+};
+
+&pmi8998_charger {
+	status = "okay";
+	monitored-battery = <&battery>;
 };
 
 &qup_uart9_default {
