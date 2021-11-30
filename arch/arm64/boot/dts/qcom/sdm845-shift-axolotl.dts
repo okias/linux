@@ -527,6 +527,12 @@
 	status = "okay";
 };
 
+&pmi8998_fg {
+	status = "okay";
+	monitored-battery = <&battery>;
+	power-supplies = <&pmi8998_charger>;
+};
+
 &pmi8998_haptics {
 	status = "okay";
 
