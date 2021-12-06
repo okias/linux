@@ -3,3 +3,95 @@
 /dts-v1/;
 
 #include "sdm845-xiaomi-beryllium-common.dtsi"
+
+&display_panel {
+	status = "okay";
+	compatible = "ebbg,ft8719";
+};
+
+&tlmm {
+	ts_mux {
+		ts_int_default: ts-int-default {
+			mux {
+				pins = "gpio31";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio31";
+				drive-strength = <16>;
+				bias-pull-down;
+				input-enable;
+			};
+		};
+
+		ts_reset_default: ts-reset-default {
+			mux {
+				pins = "gpio32";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio32";
+				drive-strength = <16>;
+				output-high;
+			};
+		};
+
+		ts_reset_sleep: ts-reset-sleep {
+			mux {
+				pins = "gpio32";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio32";
+				drive-strength = <2>;
+				bias-disable;
+				output-low;
+			};
+		};
+
+		ts_int_sleep: ts-int-sleep {
+			mux {
+				pins = "gpio31";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio31";
+				drive-strength = <2>;
+				bias-pull-down;
+				input-enable;
+			};
+		};
+	};
+};
+
+&i2c14 {
+	status = "okay";
+
+	dmas =  <&gpi_dma1 0 6 QCOM_GPI_I2C>,
+		<&gpi_dma1 1 6 QCOM_GPI_I2C>;
+	dma-names = "tx", "rx";
+
+	touchscreen: focaltech@38 {
+		compatible = "focaltech,fts8719";
+		reg = <0x38>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <31 IRQ_TYPE_EDGE_FALLING>;
+
+		vddio-supply = <&vreg_l14a_1p8>;
+
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&ts_int_default &ts_reset_default>;
+		pinctrl-1 = <&ts_int_sleep &ts_reset_sleep>;
+
+		reset-gpio = <&tlmm 32 GPIO_ACTIVE_LOW>;
+
+		touchscreen-size-x = <1080>;
+		touchscreen-size-y = <2246>;
+		focaltech,max-touch-number = <10>;
+	};
+};
+
