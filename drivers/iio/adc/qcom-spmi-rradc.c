@@ -816,6 +816,7 @@ static int rradc_read_raw(struct iio_dev *indio_dev,
 	}
 
 	chan = &chip->chans[chan_spec->address];
+	ret = rradc_do_conversion(chip, chan_spec->address, &adc_code);
 	if (ret < 0)
 		return ret;
 	dev_dbg(chip->dev, "adc_code:%d\n", adc_code);
