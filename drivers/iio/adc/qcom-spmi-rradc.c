@@ -818,7 +818,7 @@ static int rradc_read_raw(struct iio_dev *indio_dev,
 	chan = &chip->chans[chan_spec->address];
 	if (ret < 0)
 		return ret;
-	dev_info(chip->dev, "adc_code:%d\n", adc_code);
+	dev_dbg(chip->dev, "adc_code:%d\n", adc_code);
 
 	switch (mask) {
 	case IIO_CHAN_INFO_RAW:
@@ -826,7 +826,7 @@ static int rradc_read_raw(struct iio_dev *indio_dev,
 		return IIO_VAL_INT;
 	case IIO_CHAN_INFO_PROCESSED:
 		chan->scale(chip, adc_code, val);
-		dev_info(chip->dev, "%s() processed chan_id = %ld, data = %d, ret = %d",
+		dev_dbg(chip->dev, "%s() processed chan_id = %ld, data = %d, ret = %d",
 			__func__, chan_spec->address, *val, ret);
 		return IIO_VAL_INT;
 	default:
