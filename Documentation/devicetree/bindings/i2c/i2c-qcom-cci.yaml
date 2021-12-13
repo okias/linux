@@ -1,0 +1,132 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/i2c/i2c-qcom-cci.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Qualcomm Camera Control Interface (CCI) I2C controller
+
+maintainers:
+  - Rob Herring <robh+dt@kernel.org>
+
+properties:
+  compatible:
+    enum:
+      - qcom,msm8916-cci
+      - qcom,msm8996-cci
+      - qcom,sdm845-cci
+      - qcom,sm8250-cci
+
+  reg:
+    maxItems: 1
+
+  interrupts:
+    maxItems: 1
+
+  clocks:
+    minItems: 4
+    maxItems: 6
+
+  clock-names:
+    oneOf:
+      - items:
+          - const: camss_top_ahb
+          - const: cci_ahb
+          - const: cci
+          - const: camss_ahb
+      - items: # SDM845
+          - const: camnoc_axi
+          - const: soc_ahb
+          - const: slow_ahb_src
+          - const: cpas_ahb
+          - const: cci
+          - const: cci_src
+
+  power-domains: true
+
+  '#address-cells':
+    const: 1
+
+  '#size-cells':
+    const: 0
+
+allOf:
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: qcom,msm8996-cci
+    then:
+      required:
+        - power-domains
+
+patternProperties:
+  "^i2c-bus@[01]$":
+    type: object
+    description: >
+      The CCI provides I2C masters for one (msm8916) or two i2c busses (msm8996, sdm845 and sm8250).
+    properties:
+      reg:
+        maxItems: 1
+
+      clock-frequency:
+        default: 100000
+
+      '#address-cells':
+        const: 1
+
+      '#size-cells':
+        const: 0
+
+    patternProperties:
+      "^camera([-_]rear)?@[0-9a-f]+$":
+        type: object
+        description: The camera i2c node.
+
+    additionalProperties: false
+
+additionalProperties: false
+
+required:
+  - compatible
+  - reg
+  - interrupts
+  - clocks
+  - clock-names
+  - '#address-cells'
+  - '#size-cells'
+
+examples:
+  - |
+    cci@a0c000 {
+        compatible = "qcom,msm8996-cci";
+        #address-cells = <1>;
+        #size-cells = <0>;
+        reg = <0xa0c000 0x1000>;
+        interrupts = <0 295 1>;
+        clocks = <&mmcc 63>,
+             <&mmcc 78>,
+             <&mmcc 33>,
+             <&mmcc 123>,
+             <&mmcc 76>;
+        clock-names = "camss_top_ahb",
+                      "cci_ahb",
+                      "cci",
+                      "camss_ahb";
+
+        power-domains = <&mmcc 87>;
+
+        i2c-bus@0 {
+            reg = <0>;
+            clock-frequency = <400000>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+        };
+
+        i2c-bus@1 {
+            reg = <1>;
+            clock-frequency = <400000>;
+            #address-cells = <1>;
+            #size-cells = <0>;
+        };
+    };
