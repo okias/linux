@@ -1,0 +1,294 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/net/wireless/qcom,ath10k.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Qualcomm Atheros ath10k wireless devices
+
+maintainers:
+  - Kalle Valo <kvalo@codeaurora.org>
+
+allOf:
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: qcom,ath10k
+    then:
+      properties:
+        qcom,ath10k-calibration-data:
+          $ref: /schemas/types.yaml#/definitions/uint32-array
+          description: >
+            calibration data + board specific data,
+            the length can vary between HW versions
+
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: qcom,ipq4019-wifi
+    then:
+      properties:
+        clock-names:
+          items:
+            - const: wifi_wcss_cmd
+            - const: wifi_wcss_ref
+            - const: wifi_wcss_rtc
+
+        interrupts:
+          minItems: 17
+          maxItems: 17
+
+        interrupt-names:
+          items:
+            - const: msi0
+            - const: msi1
+            - const: msi2
+            - const: msi3
+            - const: msi4
+            - const: msi5
+            - const: msi6
+            - const: msi7
+            - const: msi8
+            - const: msi9
+            - const: msi10
+            - const: msi11
+            - const: msi12
+            - const: msi13
+            - const: msi14
+            - const: msi15
+            - const: legacy
+
+        qcom,ath10k-pre-calibration-data:
+          $ref: /schemas/types.yaml#/definitions/uint32-array
+          description: >
+            pre-calibration data, the length can vary between HW versions
+
+      required:
+        - interrupt-names
+
+  - if:
+      properties:
+        compatible:
+          contains:
+            const: qcom,wcn3990-wifi
+    then:
+      properties:
+        clock-names:
+          minItems: 1
+          items:
+            - const: cxo_ref_clk_pin
+            - const: qdss
+
+        interrupts:
+          minItems: 12
+          maxItems: 12
+
+properties:
+  compatible:
+    enum:
+      - qcom,ath10k  # PCI based devices
+      - qcom,ipq4019-wifi  # AHB based devices
+      - qcom,wcn3990-wifi  # SNOC based devices
+
+  clocks:
+    minItems: 1
+    maxItems: 3
+
+  clock-names: true
+
+  reg:
+    maxItems: 1
+
+  reg-names:
+    items:
+      - const: membase
+
+  interrupts: true
+
+  interrupt-names: true
+
+  resets: true
+
+  reset-names:
+    items:
+      - const: wifi_cpu_init
+      - const: wifi_radio_srif
+      - const: wifi_radio_warm
+      - const: wifi_radio_cold
+      - const: wifi_core_warm
+      - const: wifi_core_cold
+
+  iommus: true
+
+  ext-fem-name:
+    $ref: /schemas/types.yaml#/definitions/string
+    description: >
+      Name of external front end module used. Some valid FEM names
+      for example "microsemi-lx5586", "sky85703-11", "sky85803" etc.
+
+  memory-region:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: >
+      reference to the reserved-memory for the msa region
+      used by the wifi firmware running in Q6
+
+  qcom,ath10k-calibration-variant:
+    $ref: /schemas/types.yaml#/definitions/string
+    description: >
+      string to uniquely identify variant of the calibration data in the
+      board-2.bin for designs with colliding bus and device specific ids
+
+  qcom,coexist-support:
+    $ref: /schemas/types.yaml#/definitions/uint8
+    enum: [0, 1]
+    description: >
+      indicate coex support by the hardware
+
+  qcom,coexist-gpio-pin:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: >
+       gpio pin number information to support coex
+       which will be used by wifi firmware
+
+  qcom,snoc-host-cap-8bit-quirk:
+    type: boolean
+    description: >
+      Quirk specifying that the firmware expects the 8bit version
+      of the host capability QMI request
+
+  qcom,msa-fixed-perm:
+    type: boolean
+    description: >
+      context flag to disable SCM call for statically mapped msa region
+
+  qcom,xo-cal-data:
+    $ref: /schemas/types.yaml#/definitions/uint32
+    description: >
+      xo cal offset to be configured in xo trim register
+
+patternProperties:
+  '^vdd-(0.8-cx-mx|1.8-xo|1.3-rfa|3.3-ch[01])-supply$': true
+
+  '^[a-z][a-z0-9-]+-firmware$':
+    type: object
+
+    properties:
+      iommus: true
+
+    required:
+      - iommus
+
+    unevaluatedProperties: false
+
+
+required:
+  - compatible
+  - reg
+
+additionalProperties: false
+
+examples:
+  # Example (to supply PCI based wifi block details):
+  # In this example, the node is defined as child node of the PCI controller.
+  - |
+    pci {
+        pcie@0 {
+            reg = <0 0 0 0 0>;
+            #interrupt-cells = <1>;
+            #size-cells = <2>;
+            #address-cells = <3>;
+            device_type = "pci";
+
+            wifi@0,0 {
+                reg = <0 0 0 0 0>;
+                qcom,ath10k-calibration-data = <01 02 03>;
+                ext-fem-name = "microsemi-lx5586";
+            };
+        };
+    };
+
+  # Example (to supply ipq4019 SoC wifi block details):
+  - |
+    wifi0: wifi@a000000 {
+        compatible = "qcom,ipq4019-wifi";
+        reg = <0xa000000 0x200000>;
+        resets = <&gcc 0>,
+                 <&gcc 1>,
+                 <&gcc 2>,
+                 <&gcc 3>,
+                 <&gcc 4>,
+                 <&gcc 5>;
+        reset-names = "wifi_cpu_init",
+                      "wifi_radio_srif",
+                      "wifi_radio_warm",
+                      "wifi_radio_cold",
+                      "wifi_core_warm",
+                      "wifi_core_cold";
+        clocks = <&clk 59>,
+                 <&clk 60>,
+                 <&clk 61>;
+        clock-names = "wifi_wcss_cmd",
+                      "wifi_wcss_ref",
+                      "wifi_wcss_rtc";
+        interrupts = <0 0x20 0x1>,
+                     <0 0x21 0x1>,
+                     <0 0x22 0x1>,
+                     <0 0x23 0x1>,
+                     <0 0x24 0x1>,
+                     <0 0x25 0x1>,
+                     <0 0x26 0x1>,
+                     <0 0x27 0x1>,
+                     <0 0x28 0x1>,
+                     <0 0x29 0x1>,
+                     <0 0x2a 0x1>,
+                     <0 0x2b 0x1>,
+                     <0 0x2c 0x1>,
+                     <0 0x2d 0x1>,
+                     <0 0x2e 0x1>,
+                     <0 0x2f 0x1>,
+                     <0 0xa8 0x0>;
+        interrupt-names = "msi0",  "msi1",  "msi2",  "msi3",
+                          "msi4",  "msi5",  "msi6",  "msi7",
+                          "msi8",  "msi9",  "msi10", "msi11",
+                          "msi12", "msi13", "msi14", "msi15",
+                          "legacy";
+        qcom,ath10k-pre-calibration-data = <01 02 03>;
+        qcom,coexist-support = /bits/ 8  <1>;
+        qcom,coexist-gpio-pin = /bits/ 8  <0x33>;
+    };
+
+  # Example (to supply wcn3990 SoC wifi block details):
+  - |
+    wifi@18000000 {
+        compatible = "qcom,wcn3990-wifi";
+        reg = <0x18800000 0x800000>;
+        reg-names = "membase";
+        clocks = <&clk 109>;
+        clock-names = "cxo_ref_clk_pin";
+        interrupts =
+                <0 414 1>,
+                <0 415 1>,
+                <0 416 1>,
+                <0 417 1>,
+                <0 418 1>,
+                <0 419 1>,
+                <0 420 1>,
+                <0 421 1>,
+                <0 422 1>,
+                <0 423 1>,
+                <0 424 1>,
+                <0 425 1>;
+        vdd-0.8-cx-mx-supply = <&pm8998_l5>;
+        vdd-1.8-xo-supply = <&vreg_l7a_1p8>;
+        vdd-1.3-rfa-supply = <&vreg_l17a_1p3>;
+        vdd-3.3-ch0-supply = <&vreg_l25a_3p3>;
+        vdd-3.3-ch1-supply = <&vreg_l26a_3p3>;
+        memory-region = <&wifi_msa_mem>;
+        iommus = <&apps_smmu 0x0040 0x1>;
+        qcom,msa-fixed-perm;
+        wifi-firmware {
+            iommus = <&apps_iommu 0xc22 0x1>;
+        };
+    };
