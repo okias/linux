@@ -1,0 +1,151 @@
+# SPDX-License-Identifier: GPL-2.0-only
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/ufs/ufshcd-pltfrm.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Universal Flash Storage (UFS) Host Controller
+
+maintainers:
+  - Vinod Koul <vkoul@kernel.org>
+
+description: |
+  UFSHC nodes are defined to describe on-chip UFS host controllers.
+  Each UFS controller instance should have its own node
+
+properties:
+  compatible:
+    oneOf:
+      - enum:
+          - jedec,ufs-1.1
+          - jedec,ufs-2.0
+      - items:
+          - enum:
+              - qcom,msm8994-ufshc
+              - qcom,msm8996-ufshc
+              - qcom,msm8998-ufshc
+              - qcom,sdm845-ufshc
+              - qcom,sm8150-ufshc
+              - qcom,sm8250-ufshc
+              - qcom,sm8350-ufshc
+          - const: qcom,ufshc
+          - const: jedec,ufs-2.0
+
+  reg:
+    maxItems: 2
+
+  reg-names:
+    items:
+      - const: std
+      - const: ice
+
+  clocks: true
+
+  clock-names:
+    description: |
+      "ref_clk" indicates reference clock frequency.
+      UFS host supplies reference clock to UFS device and UFS device
+      specification allows host to provide one of the 4 frequencies (19.2 MHz,
+      26 MHz, 38.4 MHz, 52MHz) for reference clock. This "ref_clk" entry is
+      parsed and used to update the reference clock setting in device.
+      Defaults to 26 MHz(as per specification) if not specified by host.
+
+  iommus: true
+
+  interrupts:
+    maxItems: 1
+
+  phys:
+    maxItems: 1
+
+  phy-names:
+    const: ufsphy
+
+  power-domains: true
+
+  resets: true
+
+  reset-names:
+    const: rst
+
+  reset-gpios: true
+
+  vcc-supply-1p8:
+    description: >
+      For embedded UFS devices, valid VCC range is 1.7-1.95V
+      or 2.7-3.6V. This boolean property when set, specifies
+      to use low voltage range of 1.7-1.95V. Note for external
+      UFS cards this property is invalid and valid VCC range is
+      always 2.7-3.6V.
+
+  freq-table-hz:
+    # $ref: /schemas/types.yaml#/definitions/uint32-matrix # FIXME?
+    description: >
+      Operating frequencies stored in the same order as the clocks property.
+      If this property is not defined or a value in the array is "0"
+      then it is assumed that the frequency is set by the parent clock
+      or a fixed rate clock source.
+    minItems: 2
+    maxItems: 32 # no hard limit
+    items:
+      items:
+        - description: minimum
+        - description: maximum
+
+  lanes-per-direction:
+    description: >
+      Note that it is assume same number of lanes is used both directions at once.
+    enum: [1, 2]
+    default: 2
+
+if:
+  properties:
+    compatible:
+      contains:
+        const: qcom,ufshc
+then:
+  properties:
+    '#reset-cells':
+      const: 1
+
+patternProperties:
+  '^v(cc|ccq|ccq2|dd-hba)-supply$':
+    $ref: '/schemas/types.yaml#/definitions/phandle'
+
+  '^vcc(q|q2)?-max-microamp$':
+    description: specifies maximal load that can be drawn from supply
+
+required:
+  - compatible
+  - reg
+  - interrupts
+
+additionalProperties: false
+
+examples:
+  # Note: If above properties are not defined it can be assumed that the supply
+  # regulators or clocks are always on.
+  - |
+    ufshc@fc598000 {
+        compatible = "jedec,ufs-1.1";
+        reg = <0xfc598000 0x800>;
+        interrupts = <0 28 0>;
+
+        vdd-hba-supply = <&xxx_reg0>;
+        vcc-supply = <&xxx_reg1>;
+        vcc-supply-1p8;
+        vccq-supply = <&xxx_reg2>;
+        vccq2-supply = <&xxx_reg3>;
+        vcc-max-microamp = 500000;
+        vccq-max-microamp = 200000;
+        vccq2-max-microamp = 200000;
+
+        clocks = <&core 0>, <&ref 0>, <&phy 0>, <&iface 0>;
+        clock-names = "core_clk", "ref_clk", "phy_clk", "iface_clk";
+        freq-table-hz = <100000000 200000000>, <0 0>, <0 0>, <0 0>;
+        resets = <&reset 0 1>;
+        reset-names = "rst";
+        phys = <&ufsphy1>;
+        phy-names = "ufsphy";
+        #reset-cells = <1>;
+    };
