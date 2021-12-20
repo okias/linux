@@ -80,6 +80,9 @@ properties:
     items:
       - description: Must be 19.2MHz (19200000).
       - description: Must be >= 60 MHz in HS mode, >= 125 MHz in SS mode.
+
+  dma-ranges: true
+
   resets:
     maxItems: 1
 
