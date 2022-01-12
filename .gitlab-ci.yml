@@ -1,0 +1,22 @@
+default:
+  image: alpine:3.15
+
+stages:
+  - test
+  - build
+
+test-dtbs:
+  stage: test
+  parallel:
+    matrix:
+      DTBS:
+        - sdm845-oneplus-enchilada
+        - sdm845-oneplus-fajita
+        - sdm845-xiaomi-beryllium
+
+  script:
+    - apk add git python3-dev py3-pip
+    - pip3 install git+https://github.com/devicetree-org/dt-schema.git@master
+
+    - make defconfig
+    - make "qcom/$DTBS.dtb"
