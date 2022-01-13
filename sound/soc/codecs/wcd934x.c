@@ -1891,7 +1891,7 @@ static int wcd934x_hw_free(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int wcd934x_trigger(struct snd_pcm_substream *substream, int cmd,
+static int wcd934x_prepare(struct snd_pcm_substream *substream,
 			   struct snd_soc_dai *dai)
 {
 	struct wcd_slim_codec_dai_data *dai_data;
@@ -1901,26 +1901,26 @@ static int wcd934x_trigger(struct snd_pcm_substream *substream, int cmd,
 	wcd = snd_soc_component_get_drvdata(dai->component);
 
 	dai_data = &wcd->dai[dai->id];
-
-	switch (cmd) {
-	case SNDRV_PCM_TRIGGER_START:
-	case SNDRV_PCM_TRIGGER_RESUME:
-	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-		cfg = &dai_data->sconfig;
-		slim_stream_prepare(dai_data->sruntime, cfg);
-		slim_stream_enable(dai_data->sruntime);
-		break;
-	case SNDRV_PCM_TRIGGER_STOP:
-	case SNDRV_PCM_TRIGGER_SUSPEND:
-	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-		slim_stream_unprepare(dai_data->sruntime);
-		slim_stream_disable(dai_data->sruntime);
-		break;
-	default:
-		break;
-	}
+	cfg = &dai_data->sconfig;
+	
+	slim_stream_prepare(dai_data->sruntime, cfg);
+	slim_stream_enable(dai_data->sruntime);
 
 	return 0;
+}
+
+static void wcd934x_shutdown(struct snd_pcm_substream *substream,
+			   struct snd_soc_dai *dai)
+{
+	struct wcd_slim_codec_dai_data *dai_data;
+	struct wcd934x_codec *wcd;
+
+	wcd = snd_soc_component_get_drvdata(dai->component);
+
+	dai_data = &wcd->dai[dai->id];
+
+	slim_stream_unprepare(dai_data->sruntime);
+	slim_stream_disable(dai_data->sruntime);
 }
 
 static int wcd934x_set_channel_map(struct snd_soc_dai *dai,
@@ -2008,9 +2008,10 @@ static int wcd934x_get_channel_map(struct snd_soc_dai *dai,
 }
 
 static const struct snd_soc_dai_ops wcd934x_dai_ops = {
+	.prepare = wcd934x_prepare,
+	.shutdown = wcd934x_shutdown,
 	.hw_params = wcd934x_hw_params,
 	.hw_free = wcd934x_hw_free,
-	.trigger = wcd934x_trigger,
 	.set_channel_map = wcd934x_set_channel_map,
 	.get_channel_map = wcd934x_get_channel_map,
 };
