@@ -498,6 +498,11 @@
 	firmware-name = "qcom/sdm845/axolotl/ipa_fws.mbn";
 };
 
+&slpi_pas {
+	status = "okay";
+	firmware-name = "qcom/sdm845/axolotl/slpi.mbn";
+};
+
 &mdss {
 	status = "okay";
 };
