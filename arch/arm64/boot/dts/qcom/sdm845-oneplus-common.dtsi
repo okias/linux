@@ -13,6 +13,7 @@
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 #include <dt-bindings/sound/qcom,q6afe.h>
 #include <dt-bindings/sound/qcom,q6asm.h>
+#include <dt-bindings/sound/qcom,q6voice.h>
 
 #include "sdm845.dtsi"
 #include "sdm845-wcd9340.dtsi"
@@ -674,6 +675,14 @@
 		};
 	};
 
+	voicemmode1-dai-link {
+		link-name = "VoiceMMode1";
+
+		cpu {
+			sound-dai = <&q6voicedai VOICEMMODE1>;
+		};
+	};
+
 	speaker_playback_dai: speaker-dai-link {
 		link-name = "Speaker Playback";
 		cpu {
@@ -961,4 +970,17 @@
 
 	qcom,calibration-variant = "oneplus_sdm845";
 	qcom,snoc-host-cap-8bit-quirk;
+};
+
+/* qdsp6 hacks */
+&q6cvp {
+	status = "okay";
+};
+
+&q6cvs {
+	status = "okay";
+};
+
+&q6mvm {
+	status = "okay";
 };
