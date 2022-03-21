@@ -8,6 +8,7 @@
 /dts-v1/;
 
 #include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 #include <dt-bindings/sound/qcom,q6afe.h>
 #include <dt-bindings/sound/qcom,q6asm.h>
@@ -29,7 +30,7 @@
 		stdout-path = "serial0:115200n8";
 	};
 
-	gpio-keys {
+	volume-keys {
 		compatible = "gpio-keys";
 		label = "Volume keys";
 		autorepeat;
@@ -49,6 +50,47 @@
 			linux,code = <KEY_VOLUMEUP>;
 			gpios = <&pm8998_gpio 6 GPIO_ACTIVE_LOW>;
 			debounce-interval = <15>;
+		};
+	};
+
+	tri-state-key {
+		compatible = "gpio-keys";
+		label = "Tri-state key";
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&tri_state_key_default>;
+
+		state-top {
+			label = "Tri-state key top";
+			linux,input-type = <EV_SW>;
+			linux,code = <SW_PROG1>;
+			gpios = <&tlmm 126 GPIO_ACTIVE_HIGH>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <126 IRQ_TYPE_EDGE_BOTH>;
+			debounce-interval = <50>;
+			linux,can-disable;
+		};
+
+		state-middle {
+			label = "Tri-state key middle";
+			linux,input-type = <EV_SW>;
+			linux,code = <SW_PROG2>;
+			gpios = <&tlmm 52 GPIO_ACTIVE_HIGH>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <52 IRQ_TYPE_EDGE_BOTH>;
+			debounce-interval = <50>;
+			linux,can-disable;
+		};
+
+		state-bottom {
+			label = "Tri-state key bottom";
+			linux,input-type = <EV_SW>;
+			linux,code = <SW_PROG3>;
+			gpios = <&tlmm 24 GPIO_ACTIVE_HIGH>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <24 IRQ_TYPE_EDGE_BOTH>;
+			debounce-interval = <50>;
+			linux,can-disable;
 		};
 	};
 
@@ -750,9 +792,10 @@
 		drive-strength = <2>;
 	};
 
+	// The GPIOs have a hardware pullup.
 	tri_state_key_default: tri_state_key_default {
 		mux {
-			pins = "gpio40", "gpio42", "gpio26";
+			pins = "gpio126", "gpio52", "gpio24";
 			function = "gpio";
 			drive-strength = <2>;
 			bias-disable;
