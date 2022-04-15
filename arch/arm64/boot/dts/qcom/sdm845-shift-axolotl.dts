@@ -474,21 +474,22 @@
 &i2c5 {
 	status="okay";
 
-	touchscreen@38 {
-		compatible = "focaltech,fts8719";
+	touchscreen: focaltech@38 {
+		compatible = "focaltech,fts5452";
 		reg = <0x38>;
-		wakeup-source;
+
 		interrupt-parent = <&tlmm>;
-		interrupts = <125 0x2>;
-		vdd-supply = <&vreg_l28a_3p0>;
-		vcc-i2c-supply = <&vreg_l14a_1p88>;
+		interrupts = <125 IRQ_TYPE_EDGE_FALLING>;
 
-		pinctrl-names = "default", "suspend";
-		pinctrl-0 = <&ts_int_active &ts_reset_active>;
-		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
+		avdd-supply = <&vreg_l28a_3p0>;
+		vddio-supply = <&vreg_l14a_1p88>;
 
-		reset-gpio = <&tlmm 99 GPIO_ACTIVE_HIGH>;
-		irq-gpio = <&tlmm 125 GPIO_TRANSITORY>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&ts_int_default &ts_reset_default>;
+		pinctrl-1 = <&ts_int_sleep &ts_reset_sleep>;
+
+		reset-gpio = <&tlmm 99 GPIO_ACTIVE_LOW>;
+
 		touchscreen-size-x = <1080>;
 		touchscreen-size-y = <2160>;
 		focaltech,max-touch-number = <5>;
@@ -775,7 +776,7 @@
 		};
 	};
 
-	ts_int_active: ts-int-active {
+	ts_int_default: ts-int-default {
 		mux {
 			pins = "gpio125";
 			function = "gpio";
@@ -789,7 +790,7 @@
 		};
 	};
 
-	ts_int_suspend: ts-int-suspend {
+	ts_int_sleep: ts-int-sleep {
 		mux {
 			pins = "gpio125";
 			function = "gpio";
@@ -803,7 +804,7 @@
 		};
 	};
 
-	ts_reset_active: ts-reset-active {
+	ts_reset_default: ts-reset-default {
 		mux {
 			pins = "gpio99";
 			function = "gpio";
@@ -816,7 +817,7 @@
 		};
 	};
 
-	ts_reset_suspend: ts-reset-suspend {
+	ts_reset_sleep: ts-reset-sleep {
 		mux {
 			pins = "gpio99";
 			function = "gpio";
