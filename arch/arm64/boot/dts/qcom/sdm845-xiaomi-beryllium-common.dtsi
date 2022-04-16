@@ -221,18 +221,24 @@
 	status = "okay";
 	vdda-supply = <&vreg_l26a_1p2>;
 
+	#address-cells = <1>;
+	#size-cells = <0>;
+
 	display_panel: panel@0 {
 		status = "disabled";
 		reg = <0>;
+
 		vddio-supply = <&vreg_l14a_1p8>;
 		vddpos-supply = <&lab>;
 		vddneg-supply = <&ibb>;
 
-		#address-cells = <1>;
-		#size-cells = <0>;
+		reset-gpios = <&tlmm 6 GPIO_ACTIVE_LOW>;
 
 		backlight = <&pmi8998_wled>;
-		reset-gpios = <&tlmm 6 GPIO_ACTIVE_LOW>;
+
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&sde_dsi_active>;
+		pinctrl-1 = <&sde_dsi_suspend>;
 
 		port {
 			panel_in_0: endpoint {
@@ -475,6 +481,32 @@
 		pins = "gpio126";
 		function = "gpio";
 		bias-pull-up;
+	};
+
+	sde_dsi_active: sde_dsi_active {
+		mux {
+			pins = "gpio6", "gpio10";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio6", "gpio10";
+			drive-strength = <8>;  /* 8 mA */
+			bias-disable = <0>;  /* no pull */
+		};
+	};
+
+	sde_dsi_suspend: sde_dsi_suspend {
+		mux {
+			pins = "gpio6", "gpio10";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio6", "gpio10";
+			drive-strength = <2>;  /* 2 mA */
+			bias-pull-down;  /* PULL DOWN */
+		};
 	};
 
 	wcd_intr_default: wcd_intr_default {
