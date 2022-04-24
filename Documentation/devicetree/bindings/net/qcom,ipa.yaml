@@ -182,6 +182,11 @@ examples:
 
         smp2p-mpss {
                 compatible = "qcom,smp2p";
+                mboxes = <&apss_shared 14>;
+                qcom,smem = <435>, <428>;
+                qcom,local-pid = <0>;
+                qcom,remote-pid = <1>;
+
                 ipa_smp2p_out: ipa-ap-to-modem {
                         qcom,entry-name = "ipa";
                         #qcom,smem-state-cells = <1>;
