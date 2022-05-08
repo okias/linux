@@ -104,5 +104,15 @@
 
 			status = "disabled";
 		};
+
+		pmi8998_lpg: led-controller {
+			compatible = "qcom,pmi8998-lpg";
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+			#pwm-cells = <2>;
+
+			status = "disabled";
+		};
 	};
 };
