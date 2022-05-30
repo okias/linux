@@ -65,6 +65,7 @@ struct fts_ts_data {
 
 	struct regmap *regmap;
 	int irq;
+	int resume_irq_counter;
 
 	struct regulator_bulk_data regulators[2];
 
@@ -171,7 +172,10 @@ static irqreturn_t fts_ts_interrupt(int irq, void *dev_id)
 {
 	struct fts_ts_data *data = dev_id;
 
-	fts_report_touch(data);
+	if (data->resume_irq_counter <= 0)
+		fts_report_touch(data);
+	else
+		data->resume_irq_counter = data->resume_irq_counter - 1;
 
 	return IRQ_HANDLED;
 }
@@ -342,6 +346,8 @@ static int fts_ts_probe(struct i2c_client *client,
 		return -ENOMEM;
 
 	data->client = client;
+	data->resume_irq_counter = 0;
+
 	error = fts_parse_dt(data);
 	if (error)
 		return error;
@@ -408,6 +414,8 @@ static int fts_pm_resume(struct device *dev)
 	int error = 0;
 
 	mutex_lock(&data->input_dev->mutex);
+
+	data->resume_irq_counter = 3;
 	
 	if (input_device_enabled(data->input_dev))
 		error = fts_start(data);
