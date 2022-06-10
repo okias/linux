@@ -756,6 +756,8 @@ irqreturn_t smb2_handle_usb_plugin(int irq, void *data)
 {
 	struct smb2_chip *chip = data;
 
+	power_supply_changed(chip->chg_psy);
+
 	schedule_delayed_work(&chip->status_change_work,
 			      msecs_to_jiffies(1000));
 
