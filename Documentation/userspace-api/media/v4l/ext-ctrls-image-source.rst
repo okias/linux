@@ -151,6 +151,8 @@ Image Source Control IDs
     ``V4L2_CFA_PATTERN_FLIP_HORIZONTAL`` and ``V4L2_CFA_PATTERN_FLIP_VERTICAL``
     is provided as well.
 
+.. _image_source_control_metadata_layout:
+
 ``V4L2_CID_METADATA_LAYOUT (integer)``
     The metadata layout control defines the metadata layout on the device's data
     interface for metadata streams. The control is used in conjunction with

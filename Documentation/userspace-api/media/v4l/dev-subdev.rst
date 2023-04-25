@@ -554,6 +554,27 @@ A stream at a specific point in the media pipeline is identified by the
 sub-device and a (pad, stream) pair. For sub-devices that do not support
 multiplexed streams the 'stream' field is always 0.
 
+.. _v4l2-subdev-internal-source-pads:
+
+Internal sink pads and routing
+------------------------------
+
+Cases where a single sub-device source pad is carries multiple streams, one or
+more of which originate from within the sub-device itself, are special as there
+is no external sink pad for such routes. In those cases, the sources of the
+internally generated streams are represented by internal sink pads, which are
+sink pads that have the :ref:`MEDIA_PAD_FL_INTERNAL <MEDIA-PAD-FL-INTERNAL>` pad
+flag set.
+
+Internal pads have all the properties of an external pad, including formats and
+selections. The format in this case is the source format of the stream. An
+internal pad always has a single stream only (0).
+
+Routes from an internal sink pad to an external source pad are created by the
+driver and can be activated and deactivated using the
+:ref:`V4L2_SUBDEV_ROUTE_FL_ACTIVE <v4l2-subdev-routing-flags>` flag, depending
+on the device capabilities.
+
 Interaction between routes, streams, formats and selections
 -----------------------------------------------------------
 
@@ -691,3 +712,8 @@ To configure this pipeline, the userspace must take the following steps:
    the configurations along the stream towards the receiver, using
    :ref:`VIDIOC_SUBDEV_S_FMT <VIDIOC_SUBDEV_G_FMT>` ioctls to configure each
    stream endpoint in each sub-device.
+
+   In case generic raw and metadata formats are used, :ref:`V4L2_CID_CFA_PATTERN
+   <image-source-control-cfa-pattern>` and :ref:`V4L2_CID_METADATA_LAYOUT
+   <image_source_control_metadata_layout>` controls are present on the source
+   sub-device to obtain the pixel array CFA pattern and metadata layout.
