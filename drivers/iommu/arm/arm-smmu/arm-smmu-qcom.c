@@ -540,6 +540,11 @@ static const struct of_device_id __maybe_unused qcom_smmu_impl_of_match[] = {
 	{ .compatible = "qcom,sm8350-smmu-500", .data = &qcom_smmu_500_impl0_data },
 	{ .compatible = "qcom,sm8450-smmu-500", .data = &qcom_smmu_500_impl0_data },
 	{ .compatible = "qcom,smmu-500", .data = &qcom_smmu_500_impl0_data },
+	/*
+	 * Should come after the qcom,smmu-500 fallback so smmu-500 variants of
+	 * adreno-smmu get qcom_adreno_smmu_500_impl:
+	 */
+	{ .compatible = "qcom,adreno-smmu", .data = &qcom_smmu_v2_data },
 	{ }
 };
 
