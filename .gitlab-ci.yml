@@ -1,0 +1,78 @@
+.templates_sha: &templates_sha 08fce249df1067b52423a6532fb66ad6bd96a79f
+
+variables:
+  TEMPLATES_SHA: *templates_sha
+  FDO_UPSTREAM_REPO: gfx-ci/linux
+  DEBIAN_DISTRO: bookworm
+  S3_HOST: s3.freedesktop.org
+
+
+include:
+  - project: 'freedesktop/ci-templates'
+    ref: *templates_sha
+    file:
+      - '/templates/debian.yml'
+
+stages:
+  - prepare
+  - build
+
+.debian-image:
+  variables:
+    FDO_DISTRIBUTION_TAG: '2023-06-10.4'
+    FDO_DISTRIBUTION_VERSION: 'bookworm-slim'
+
+debian-image:
+  stage: prepare
+  rules:
+    - if: '$CI_COMMIT_TAG'
+      when: always
+    - when: manual
+  extends:
+    - .fdo.container-build@debian
+    - .debian-image
+  variables:
+    FDO_DISTRIBUTION_EXEC: 'pip3 install --break-system-packages git+http://gitlab.freedesktop.org/freedesktop/ci-templates@$TEMPLATES_SHA'
+    FDO_DISTRIBUTION_PACKAGES: 'git python3-pip ccache apt-utils curl build-essential linux-source bc kmod cpio flex libncurses5-dev libelf-dev libssl-dev dwarves bison crossbuild-essential-armhf crossbuild-essential-arm64 u-boot-tools zstd'
+    GIT_STRATEGY: none
+    FDO_DISTRIBUTION_EXEC: 'pip3 install --break-system-packages git+http://gitlab.freedesktop.org/freedesktop/ci-templates@08fce249df1067b52423a6532fb66ad6bd96a79f'
+
+build-kernel:
+  stage: build
+  extends:
+    - .fdo.distribution-image@debian
+    - .debian-image
+  tags:
+    - packet.net
+  before_script:
+    - export PATH="/usr/lib/ccache:$PATH"
+    - export CCACHE_BASEDIR="$PWD"
+    - export CCACHE_DIR="$PWD/ccache"
+    - export CCACHE_COMPILERCHECK=content
+    - ccache --show-stats || true
+  after_script:
+    - export CCACHE_DIR="$PWD/ccache"
+    - ccache --show-stats
+  script:
+    - .gitlab-ci/build.sh
+  artifacts:
+    name: $CI_JOB_NAME
+    paths:
+      - .config
+      - defconfig
+      - kernels
+      - dtbs
+      - modules.tar.zst
+    expire_in: 9 months
+  cache:
+    key: $CI_JOB_NAME_SLUG
+    paths:
+      - ccache/
+  parallel:
+    matrix:
+      - DEBIAN_ARCH: amd64
+        KERNEL_ARCH: x86_64
+      - DEBIAN_ARCH: armhf
+        KERNEL_ARCH: arm
+      - DEBIAN_ARCH: arm64
+        KERNEL_ARCH: arm64
