@@ -705,6 +705,7 @@
 		regulator-name = "VDD_GFX";
 		regulator-min-microvolt = <980000>;
 		regulator-max-microvolt = <980000>;
+		regulator-always-on;
 	};
 };
 
