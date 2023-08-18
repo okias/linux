@@ -17,31 +17,28 @@ properties:
     enum:
       - qcom,q6afe-dais
 
-  '#sound-dai-cells':
+  "#sound-dai-cells":
     const: 1
 
-  '#address-cells':
+  "#address-cells":
     const: 1
 
-  '#size-cells':
+  "#size-cells":
     const: 0
 
 # Digital Audio Interfaces
 patternProperties:
-  '^dai@[0-9]+$':
+  "^dai@[0-9]+$":
     type: object
-    description:
-      Q6DSP Digital Audio Interfaces.
+    description: Q6DSP Digital Audio Interfaces.
 
     properties:
       reg:
-        description:
-          Digital Audio Interface ID
+        description: Digital Audio Interface ID
 
       qcom,sd-lines:
         $ref: /schemas/types.yaml#/definitions/uint32-array
-        description:
-          List of serial data lines used by this dai.should be one or more of the 0-3 sd lines.
+        description: List of serial data lines used by this dai.should be one or more of the 0-3 sd lines.
         minItems: 1
         maxItems: 4
         uniqueItems: true
@@ -52,44 +49,39 @@ patternProperties:
       qcom,tdm-sync-mode:
         $ref: /schemas/types.yaml#/definitions/uint32
         enum: [0, 1, 2]
-        description:
-          TDM Synchronization mode
-            0 = Short sync bit mode
-            1 = Long sync mode
-            2 = Short sync slot mode
+        description: TDM Synchronization mode
+          0 = Short sync bit mode
+          1 = Long sync mode
+          2 = Short sync slot mode
 
       qcom,tdm-sync-src:
         $ref: /schemas/types.yaml#/definitions/uint32
         enum: [0, 1]
-        description:
-          TDM Synchronization source
-            0 = External source
-            1 = Internal source
+        description: TDM Synchronization source
+          0 = External source
+          1 = Internal source
 
       qcom,tdm-data-out:
         $ref: /schemas/types.yaml#/definitions/uint32
         enum: [0, 1]
-        description:
-          TDM Data out signal to drive with other masters
-            0 = Disable
-            1 = Enable
+        description: TDM Data out signal to drive with other masters
+          0 = Disable
+          1 = Enable
 
       qcom,tdm-invert-sync:
         $ref: /schemas/types.yaml#/definitions/uint32
         enum: [0, 1]
-        description:
-          TDM Invert the sync
-            0 = Normal
-            1 = Invert
+        description: TDM Invert the sync
+          0 = Normal
+          1 = Invert
 
       qcom,tdm-data-delay:
         $ref: /schemas/types.yaml#/definitions/uint32
         enum: [0, 1, 2]
-        description:
-          TDM Number of bit clock to delay data
-            0 = 0 bit clock cycle
-            1 = 1 bit clock cycle
-            2 = 2 bit clock cycle
+        description: TDM Number of bit clock to delay data
+          0 = 0 bit clock cycle
+          1 = 1 bit clock cycle
+          2 = 2 bit clock cycle
 
       qcom,tdm-data-align:
         $ref: /schemas/types.yaml#/definitions/uint32
@@ -97,8 +89,8 @@ patternProperties:
         description:
           Indicate how data is packed within the slot. For example, 32 slot
           width in case of sample bit width is 24TDM Invert the sync.
-            0 = MSB
-            1 = LSB
+          0 = MSB
+          1 = LSB
 
     required:
       - reg
@@ -126,13 +118,16 @@ patternProperties:
             reg:
               contains:
                 # MI2S DAI ID range PRIMARY_MI2S_RX - QUATERNARY_MI2S_TX and
-                # QUINARY_MI2S_RX - QUINARY_MI2S_TX
+                # QUINARY_MI2S_RX - QUINARY_MI2S_TX and
+                # INT0_MI2S_RX - INT6_MI2S_TX
                 items:
                   oneOf:
                     - minimum: 16
                       maximum: 23
                     - minimum: 127
                       maximum: 128
+                    - minimum: 137
+                      maximum: 150
         then:
           required:
             - qcom,sd-lines
