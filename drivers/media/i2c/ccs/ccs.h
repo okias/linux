@@ -238,9 +238,6 @@ struct ccs_sensor {
 
 	u8 emb_data_ctrl;
 
-	u8 binning_horizontal;
-	u8 binning_vertical;
-
 	u8 scale_m;
 	u8 scaling_mode;
 
