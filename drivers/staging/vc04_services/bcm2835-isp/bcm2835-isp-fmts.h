@@ -35,14 +35,19 @@ struct bcm2835_isp_fmt {
 #define V4L2_COLORSPACE_MASK_RAW V4L2_COLORSPACE_MASK(V4L2_COLORSPACE_RAW)
 
 /*
- * The colour spaces we support for YUV outputs. SRGB features here because,
- * once you assign the default transfer func and so on, it and JPEG effectively
- * mean the same.
+ * All three colour spaces JPEG, SMPTE170M and REC709 are fundamentally sRGB
+ * underneath (as near as makes no difference to us), just with different YCbCr
+ * encodings. Therefore the ISP can generate sRGB on its main output and any of
+ * the others on its low resolution output. Applications should, when using both
+ * outputs, program the colour spaces on them to be the same, matching whatever
+ * is requested for the low resolution output, even if the main output is
+ * producing an RGB format. In turn this requires us to allow all these colour
+ * spaces for every YUV/RGB output format.
  */
-#define V4L2_COLORSPACE_MASK_YUV (V4L2_COLORSPACE_MASK_JPEG | \
-				  V4L2_COLORSPACE_MASK_SRGB | \
-				  V4L2_COLORSPACE_MASK_SMPTE170M | \
-				  V4L2_COLORSPACE_MASK_REC709)
+#define V4L2_COLORSPACE_MASK_ALL_SRGB (V4L2_COLORSPACE_MASK_JPEG |	\
+				       V4L2_COLORSPACE_MASK_SRGB |	\
+				       V4L2_COLORSPACE_MASK_SMPTE170M |	\
+				       V4L2_COLORSPACE_MASK_REC709)
 
 static const struct bcm2835_isp_fmt supported_formats[] = {
 	{
@@ -52,7 +57,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 64,
 		.mmal_fmt	    = MMAL_ENCODING_I420,
 		.size_multiplier_x2 = 3,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_YUV,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_JPEG,
 		.step_size	    = 2,
 	}, {
@@ -61,7 +66,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 64,
 		.mmal_fmt	    = MMAL_ENCODING_YV12,
 		.size_multiplier_x2 = 3,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_YUV,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SMPTE170M,
 		.step_size	    = 2,
 	}, {
@@ -70,7 +75,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 32,
 		.mmal_fmt	    = MMAL_ENCODING_NV12,
 		.size_multiplier_x2 = 3,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_YUV,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SMPTE170M,
 		.step_size	    = 2,
 	}, {
@@ -79,7 +84,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 32,
 		.mmal_fmt	    = MMAL_ENCODING_NV21,
 		.size_multiplier_x2 = 3,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_YUV,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SMPTE170M,
 		.step_size	    = 2,
 	}, {
@@ -88,7 +93,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 64,
 		.mmal_fmt	    = MMAL_ENCODING_YUYV,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_YUV,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SMPTE170M,
 		.step_size	    = 2,
 	}, {
@@ -97,7 +102,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 64,
 		.mmal_fmt	    = MMAL_ENCODING_UYVY,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_YUV,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SMPTE170M,
 		.step_size	    = 2,
 	}, {
@@ -106,7 +111,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 64,
 		.mmal_fmt	    = MMAL_ENCODING_YVYU,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_YUV,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SMPTE170M,
 		.step_size	    = 2,
 	}, {
@@ -115,7 +120,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 64,
 		.mmal_fmt	    = MMAL_ENCODING_VYUY,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_YUV,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SMPTE170M,
 		.step_size	    = 2,
 	}, {
@@ -125,7 +130,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 32,
 		.mmal_fmt	    = MMAL_ENCODING_RGB24,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_SRGB,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SRGB,
 		.step_size	    = 1,
 	}, {
@@ -134,7 +139,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 32,
 		.mmal_fmt	    = MMAL_ENCODING_RGB16,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_SRGB,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SRGB,
 		.step_size	    = 1,
 	}, {
@@ -143,7 +148,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 32,
 		.mmal_fmt	    = MMAL_ENCODING_BGR24,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_SRGB,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SRGB,
 		.step_size	    = 1,
 	}, {
@@ -152,7 +157,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 64,
 		.mmal_fmt	    = MMAL_ENCODING_BGRA,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_SRGB,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SRGB,
 		.step_size	    = 1,
 	}, {
@@ -161,7 +166,7 @@ static const struct bcm2835_isp_fmt supported_formats[] = {
 		.bytesperline_align = 64,
 		.mmal_fmt	    = MMAL_ENCODING_RGBA,
 		.size_multiplier_x2 = 2,
-		.colorspace_mask    = V4L2_COLORSPACE_MASK_SRGB,
+		.colorspace_mask    = V4L2_COLORSPACE_MASK_ALL_SRGB,
 		.colorspace_default = V4L2_COLORSPACE_SRGB,
 		.step_size	    = 1,
 	}, {
