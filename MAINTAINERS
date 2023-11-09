@@ -4962,6 +4962,15 @@ F:	Documentation/devicetree/bindings/mips/brcm/
 F:	arch/mips/bcm47xx/*
 F:	arch/mips/include/asm/mach-bcm47xx/*
 
+BROADCOM BCM2835 ISP DRIVER
+M:	Raspberry Pi Kernel Maintenance <kernel-list@raspberrypi.com>
+L:	linux-media@vger.kernel.org
+S:	Maintained
+F:	Documentation/media/uapi/v4l/pixfmt-meta-bcm2835-isp-stats.rst
+F:	Documentation/media/v4l-drivers/bcm2835-isp.rst
+F:	drivers/staging/vc04_services/bcm2835-isp
+F:	include/uapi/linux/bcm2835-isp.h
+
 BROADCOM BCM4908 ETHERNET DRIVER
 M:	Rafał Miłecki <rafal@milecki.pl>
 R:	Broadcom internal kernel review list <bcm-kernel-feedback-list@broadcom.com>

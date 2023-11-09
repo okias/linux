@@ -1433,11 +1433,7 @@ static void vchiq_remove(struct platform_device *pdev)
 	struct vchiq_drv_mgmt *mgmt = dev_get_drvdata(&pdev->dev);
 
 	vchiq_device_unregister(bcm2835_audio);
-<<<<<<< HEAD:drivers/platform/raspberrypi/vchiq-interface/vchiq_arm.c
-=======
-	vchiq_device_unregister(bcm2835_camera);
 	vchiq_device_unregister(vcsm_cma);
->>>>>>> 08428b0cf783 (staging: vc04_services: vchiq_arm: Register vcsm-cma driver):drivers/staging/vc04_services/interface/vchiq_arm/vchiq_arm.c
 	vchiq_debugfs_deinit();
 	vchiq_deregister_chrdev();
 	vchiq_platform_uninit(mgmt);
