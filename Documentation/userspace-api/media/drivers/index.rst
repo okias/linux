@@ -28,6 +28,7 @@ For more details see the file COPYING in the source distribution of Linux.
 
 	aspeed-video
 	camera-sensor
+	bcm2835-isp
 	ccs
 	cx2341x-uapi
 	dw100
