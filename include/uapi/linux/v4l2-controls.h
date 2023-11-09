@@ -214,13 +214,17 @@ enum v4l2_colorfx {
  * We reserve 32 controls for this driver.
  */
 #define V4L2_CID_USER_THP7312_BASE		(V4L2_CID_USER_BASE + 0x11c0)
-
 /*
  * The base for the uvc driver controls.
  * See linux/uvcvideo.h for the list of controls.
  * We reserve 64 controls for this driver.
  */
 #define V4L2_CID_USER_UVC_BASE			(V4L2_CID_USER_BASE + 0x11e0)
+/*
+ * The base for the bcm2835-isp driver controls.
+ * We reserve 16 controls for this driver.
+ */
+#define V4L2_CID_USER_BCM2835_ISP_BASE		(V4L2_CID_USER_BASE + 0x1220)
 
 /*
  * The base for Rockchip ISP1 driver controls.
