@@ -1629,6 +1629,12 @@ static int bcm2835_isp_probe(struct vchiq_device *device)
 	unsigned int i;
 	int ret;
 
+	ret = dma_set_mask_and_coherent(&device->dev, DMA_BIT_MASK(32));
+	if (ret) {
+		dev_err(&device->dev, "dma_set_mask_and_coherent failed: %d\n", ret);
+		return ret;
+	}
+
 	dev = devm_kzalloc(&device->dev, sizeof(*dev), GFP_KERNEL);
 	if (!dev)
 		return -ENOMEM;
