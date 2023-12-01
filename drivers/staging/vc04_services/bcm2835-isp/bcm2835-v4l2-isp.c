@@ -496,7 +496,7 @@ static int bcm2835_isp_buf_prepare(struct vb2_buffer *vb)
 		if (!buf->mmal.dma_buf) {
 			buf->mmal.dma_buf = vb2_core_expbuf_dmabuf(vb->vb2_queue,
 								   vb->vb2_queue->type,
-								   vb->index, 0, O_CLOEXEC);
+								   vb, 0, O_CLOEXEC);
 			v4l2_dbg(3, debug, &dev->v4l2_dev,
 				 "%s: exporting ptr %p to dmabuf %p\n",
 				 __func__, vb, buf->mmal.dma_buf);
