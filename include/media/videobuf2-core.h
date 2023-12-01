@@ -971,7 +971,7 @@ int vb2_core_streamoff(struct vb2_queue *q, unsigned int type);
  * vb2_core_expbuf_dmabuf() - Export a buffer as a dma_buf structure
  * @q:         videobuf2 queue
  * @type:      buffer type
- * @index:     id number of the buffer
+ * @vb:        pointer to struct &vb2_buffer.
  * @plane:     index of the plane to be exported, 0 for single plane queues
  * @flags:     flags for newly created file, currently only O_CLOEXEC is
  *             supported, refer to manual of open syscall for more details
@@ -979,7 +979,7 @@ int vb2_core_streamoff(struct vb2_queue *q, unsigned int type);
  * Return: Returns the dmabuf pointer
  */
 struct dma_buf *vb2_core_expbuf_dmabuf(struct vb2_queue *q, unsigned int type,
-				       unsigned int index, unsigned int plane,
+				       struct vb2_buffer *vb, unsigned int plane,
 				       unsigned int flags);
 
 /**
