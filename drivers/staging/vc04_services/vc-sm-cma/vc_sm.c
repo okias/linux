@@ -415,7 +415,7 @@ static const struct dma_buf_ops dma_buf_import_ops = {
 };
 
 /* Import a dma_buf to be shared with VC. */
-int
+static int
 vc_sm_cma_import_dmabuf_internal(struct sm_state_t *state,
 				 struct dma_buf *dma_buf,
 				 int fd,
