@@ -698,7 +698,7 @@ static int bcm2835_vc_sm_cma_probe(struct vchiq_device *device)
 	/* dma_set_max_seg_size checks if dma_parms is NULL. */
 	dma_set_max_seg_size(dev, 0x3FFFFFFF);
 
-	vchiq_add_connected_callback(vc_sm_connected_init);
+	vchiq_add_connected_callback(device, vc_sm_connected_init);
 	return 0;
 }
 
