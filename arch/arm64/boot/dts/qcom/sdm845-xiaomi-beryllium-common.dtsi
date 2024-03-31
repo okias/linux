@@ -737,3 +737,9 @@
 	vdd-3.3-ch0-supply = <&vreg_l25a_3p3>;
 	vdd-3.3-ch1-supply = <&vreg_l23a_3p3>;
 };
+
+
+&slpi_pas {
+	firmware-name = "qcom/sdm845/beryllium/slpi.mbn";
+        status = "okay";
+};
