@@ -2914,6 +2914,9 @@ static int ccs_get_frame_desc(struct v4l2_subdev *subdev, unsigned int pad,
 	struct v4l2_mbus_frame_desc_entry *entry = desc->entry;
 	struct v4l2_subdev_state *sd_state;
 
+	if (ccs_has_quirk(sensor, frame_desc))
+		return ccs_call_quirk(sensor, frame_desc, desc);
+
 	switch (sensor->hwcfg.csi_signalling_mode) {
 	case CCS_CSI_SIGNALING_MODE_CSI_2_DPHY:
 	case CCS_CSI_SIGNALING_MODE_CSI_2_CPHY:
