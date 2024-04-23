@@ -1867,6 +1867,57 @@ error:
 	return rval;
 }
 
+#define CCS_EMBEDDED_CODE_DEPTH(depth, half_depth)			\
+	depth,								\
+	CCS_EMB_DATA_CAPABILITY_TWO_BYTES_PER_RAW##depth,		\
+	CCS_EMB_DATA_CAPABILITY_NO_ONE_BYTE_PER_RAW##depth,		\
+	CCS_EMB_DATA_CTRL_RAW##half_depth##_PACKING_FOR_RAW##depth,	\
+	MEDIA_BUS_FMT_META_##half_depth,				\
+	MEDIA_BUS_FMT_META_##depth,					\
+
+static const struct ccs_embedded_code {
+	u8 depth;
+	u8 cap_two_bytes_per_sample;
+	u8 cap_no_legacy;
+	u8 ctrl;
+	u32 code_two_bytes;
+	u32 code_legacy;
+} ccs_embedded_codes[] = {
+	{ CCS_EMBEDDED_CODE_DEPTH(16, 8) },
+	{ CCS_EMBEDDED_CODE_DEPTH(20, 10) },
+	{ CCS_EMBEDDED_CODE_DEPTH(24, 12) },
+};
+
+static const struct ccs_embedded_code *ccs_embedded_code(unsigned int bpp)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(ccs_embedded_codes); i++)
+		if (ccs_embedded_codes[i].depth == bpp)
+			return ccs_embedded_codes + i;
+
+	WARN_ON(1);
+
+	return ccs_embedded_codes;
+}
+
+static u32
+ccs_default_embedded_code(struct ccs_sensor *sensor,
+			  const struct ccs_embedded_code *embedded_code)
+{
+	if (CCS_LIM(sensor, EMB_DATA_CAPABILITY) &
+	    BIT(embedded_code->cap_two_bytes_per_sample))
+		return embedded_code->code_two_bytes;
+
+	if (!(CCS_LIM(sensor, EMB_DATA_CAPABILITY) &
+	      BIT(embedded_code->cap_no_legacy)))
+		return embedded_code->code_legacy;
+
+	WARN_ON(1);
+
+	return embedded_code->code_legacy;
+}
+
 static int ccs_enable_streams(struct v4l2_subdev *subdev,
 			      struct v4l2_subdev_state *state, u32 pad,
 			      u64 streams_mask)
@@ -2001,7 +2052,16 @@ static int ccs_enable_streams(struct v4l2_subdev *subdev,
 
 	/* Configure embedded data */
 	if (sensor->csi_format->compressed >= 16) {
-		rval = ccs_write(sensor, EMB_DATA_CTRL, sensor->emb_data_ctrl);
+		const struct ccs_embedded_code *embedded_code =
+			ccs_embedded_code(sensor->csi_format->compressed);
+		const struct v4l2_mbus_framefmt *meta_out_fmt =
+			v4l2_subdev_state_get_format(src_state, CCS_PAD_SRC,
+						     CCS_STREAM_META);
+
+		rval = ccs_write(sensor, EMB_DATA_CTRL,
+				 meta_out_fmt->code ==
+				 embedded_code->code_legacy ?
+				 0 : embedded_code->ctrl);
 		if (rval < 0)
 			goto err_pm_put;
 	}
@@ -2121,57 +2181,6 @@ static const struct ccs_csi_data_format
 	}
 
 	return sensor->csi_format;
-}
-
-#define CCS_EMBEDDED_CODE_DEPTH(depth, half_depth)			\
-	depth,								\
-	CCS_EMB_DATA_CAPABILITY_TWO_BYTES_PER_RAW##depth,		\
-	CCS_EMB_DATA_CAPABILITY_NO_ONE_BYTE_PER_RAW##depth,		\
-	CCS_EMB_DATA_CTRL_RAW##half_depth##_PACKING_FOR_RAW##depth,	\
-	MEDIA_BUS_FMT_META_##half_depth,				\
-	MEDIA_BUS_FMT_META_##depth,					\
-
-static const struct ccs_embedded_code {
-	u8 depth;
-	u8 cap_two_bytes_per_sample;
-	u8 cap_no_legacy;
-	u8 ctrl;
-	u32 code_two_bytes;
-	u32 code_legacy;
-} ccs_embedded_codes[] = {
-	{ CCS_EMBEDDED_CODE_DEPTH(16, 8) },
-	{ CCS_EMBEDDED_CODE_DEPTH(20, 10) },
-	{ CCS_EMBEDDED_CODE_DEPTH(24, 12) },
-};
-
-static const struct ccs_embedded_code *ccs_embedded_code(unsigned int bpp)
-{
-	unsigned int i;
-
-	for (i = 0; i < ARRAY_SIZE(ccs_embedded_codes); i++)
-		if (ccs_embedded_codes[i].depth == bpp)
-			return ccs_embedded_codes + i;
-
-	WARN_ON(1);
-
-	return ccs_embedded_codes;
-}
-
-static u32
-ccs_default_embedded_code(struct ccs_sensor *sensor,
-			  const struct ccs_embedded_code *embedded_code)
-{
-	if (CCS_LIM(sensor, EMB_DATA_CAPABILITY) &
-	    BIT(embedded_code->cap_two_bytes_per_sample))
-		return embedded_code->code_two_bytes;
-
-	if (!(CCS_LIM(sensor, EMB_DATA_CAPABILITY) &
-	      BIT(embedded_code->cap_no_legacy)))
-		return embedded_code->code_legacy;
-
-	WARN_ON(1);
-
-	return embedded_code->code_legacy;
 }
 
 static int ccs_enum_mbus_code(struct v4l2_subdev *subdev,
@@ -2425,16 +2434,13 @@ static int ccs_set_format_meta(struct v4l2_subdev *subdev,
 
 		if (!(CCS_LIM(sensor, EMB_DATA_CAPABILITY) &
 		      BIT(embedded_code->cap_no_legacy)) &&
-		    code == embedded_code->code_legacy) {
+		    code == embedded_code->code_legacy)
 			meta_fmt->code = embedded_code->code_legacy;
-			sensor->emb_data_ctrl = 0;
-		}
 
 		if (CCS_LIM(sensor, EMB_DATA_CAPABILITY) &
 		    BIT(embedded_code->cap_two_bytes_per_sample) &&
 		    code == embedded_code->code_two_bytes) {
 			meta_fmt->code = embedded_code->code_two_bytes;
-			sensor->emb_data_ctrl = embedded_code->ctrl;
 			meta_fmt->width <<= 1;
 		}
 
