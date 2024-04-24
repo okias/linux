@@ -15,7 +15,8 @@ export MAKEFLAGS="-j${FDO_CI_CONCURRENT:-4}"
 
 GIT_TAG=$(git describe --tags --always)
 # FIXME: drop DEBIAN_ARCH
-S3_PATH="${S3_HOST}/mesa-lava/${CI_PROJECT_PATH}/${GIT_TAG}/${DEBIAN_ARCH}"
+S3_BUCKET="mesa-rootfs"
+S3_PATH="${S3_HOST}/${S3_BUCKET}/${CI_PROJECT_PATH}/${GIT_TAG}/${DEBIAN_ARCH}"
 
 if [ "${KERNEL_ARCH}" == "x86_64" ]; then
   DEFCONFIG="arch/x86/configs/x86_64_defconfig"
