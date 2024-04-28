@@ -406,7 +406,7 @@
 };
 
 &i2c2 {
-	status = "disabled";
+	status = "okay";
 	#dma-cells = <3>;
 
 	dmas =  <&gpi_dma0 0 2 QCOM_GPI_I2C>,
@@ -414,6 +414,7 @@
 	dma-names = "tx", "rx";
 
 	touchscreen@49 {
+		status = "okay";
 		compatible = "st,fts";
 		reg = <0x49>;
 		pinctrl-names = "default";
