@@ -1713,7 +1713,7 @@ static int bcm2835_isp_probe_instance(struct vchiq_device *device,
 	if (ret)
 		return ret;
 
-	ret = vchiq_mmal_init(&dev->mmal_instance);
+	ret = vchiq_mmal_init(&device->dev, &dev->mmal_instance);
 	if (ret) {
 		v4l2_device_unregister(&dev->v4l2_dev);
 		return ret;
