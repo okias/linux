@@ -21,8 +21,8 @@
 #include <linux/miscdevice.h>
 #include <linux/syscalls.h>
 
+#include "../interface/vchiq_arm/vchiq_arm.h"
 #include "../interface/vchiq_arm/vchiq_bus.h"
-#include "../interface/vchiq_arm/vchiq_connected.h"
 #include "vc_sm_cma_vchi.h"
 
 #include "vc_sm.h"
@@ -621,7 +621,8 @@ static void vc_sm_connected_init(void)
 	 * Initialize and create a VCHI connection for the shared memory service
 	 * running on videocore.
 	 */
-	ret = vchiq_initialise(&sm_state->vchiq_instance);
+	ret = vchiq_initialise(&sm_state->device->drv_mgmt->state,
+			       &sm_state->vchiq_instance);
 	if (ret) {
 		dev_err(&sm_state->device->dev, "[%s]: failed to initialise VCHI instance (ret=%d)\n",
 			__func__, ret);
