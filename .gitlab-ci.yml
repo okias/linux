@@ -4,8 +4,8 @@ variables:
   TEMPLATES_SHA: *templates_sha
   FDO_UPSTREAM_REPO: gfx-ci/linux
   DEBIAN_DISTRO: bookworm
+  S3_JWT_FILE: /s3_jwt
   S3_HOST: s3.freedesktop.org
-
 
 include:
   - project: 'freedesktop/ci-templates'
@@ -44,17 +44,23 @@ build-kernel:
     - .debian-image
   tags:
     - packet.net
+  id_tokens:
+    S3_JWT:
+      aud: https://s3.freedesktop.org
   before_script:
+    - echo -n "${S3_JWT}" > "${S3_JWT_FILE}" && unset CI_JOB_JWT S3_JWT  # Unsetting vulnerable env variables
     - export PATH="/usr/lib/ccache:$PATH"
     - export CCACHE_BASEDIR="$PWD"
     - export CCACHE_DIR="$PWD/ccache"
     - export CCACHE_COMPILERCHECK=content
     - ccache --show-stats || true
-  after_script:
-    - export CCACHE_DIR="$PWD/ccache"
-    - ccache --show-stats
   script:
     - .gitlab-ci/build.sh
+  after_script:
+    - set +x
+    - test -e "${S3_JWT_FILE}" && export S3_JWT="$(<${S3_JWT_FILE})" && rm "${S3_JWT_FILE}"
+    - export CCACHE_DIR="$PWD/ccache"
+    - ccache --show-stats
   artifacts:
     name: $CI_JOB_NAME
     paths:
