@@ -42,6 +42,7 @@ elif [ "${KERNEL_ARCH}" == "arm64" ]; then
   DT_PATH="arch/arm64/boot/dts"
   DT=(
     rockchip/rk3399-gru-kevin.dtb
+    rockchip/rk3588-rock-5b.dtb
     amlogic/meson-g12b-a311d-khadas-vim3.dtb
     amlogic/meson-gxl-s805x-libretech-ac.dtb
     amlogic/meson-gxm-khadas-vim2.dtb
