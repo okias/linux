@@ -133,6 +133,42 @@
 		regulator-max-microvolt = <1800000>;
 		regulator-always-on;
 	};
+
+	cam_iovdd: reg_cam_iovdd {
+		compatible = "regulator-fixed";
+		regulator-name = "cam_iovdd";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		enable-active-high;
+		gpio = <&tlmm 50 GPIO_ACTIVE_HIGH>;
+	};
+
+	cam_ldo: reg_cam_ldo {
+		compatible = "regulator-fixed";
+		regulator-name = "cam_ldo";
+		regulator-min-microvolt = <1350000>;
+		regulator-max-microvolt = <1350000>;
+		enable-active-high;
+		gpio = <&tlmm 99 GPIO_ACTIVE_HIGH>;
+		regulator-always-on;
+	};
+
+	cam0_avdd: reg_cam0_avdd {
+		compatible = "regulator-fixed";
+		regulator-name = "cam0_avdd";
+		enable-active-high;
+		gpio = <&tlmm 40 GPIO_ACTIVE_HIGH>;
+	};
+
+	cam0_dvdd: reg_cam0_dvdd {
+		compatible = "regulator-fixed";
+		regulator-name = "cam0_dvdd";
+		regulator-min-microvolt = <1350000>;
+		regulator-max-microvolt = <1350000>;
+		regulator-enable-ramp-delay = <135>;
+		enable-active-high;
+		gpio = <&pm8998_gpios 11 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &adsp_pas {
@@ -145,6 +181,9 @@
 		compatible = "qcom,pm8998-rpmh-regulators";
 		qcom,pmic-id = "a";
 
+		vdda_mipi_csi0_0p9:
+		vdda_mipi_csi1_0p9:
+		vdda_mipi_csi2_0p9:
 		vreg_l1a_0p875: ldo1 {
 			regulator-min-microvolt = <880000>;
 			regulator-max-microvolt = <880000>;
@@ -600,6 +639,32 @@
 &tlmm {
 	gpio-reserved-ranges = <0 4>, <81 4>;
 
+	cam0_default: cam0_default {
+		rst {
+			pins = "gpio80";
+			function = "gpio";
+
+			drive-strength = <2>;
+			bias-disable;
+		};
+
+		avdd {
+			pins = "gpio40";
+			function = "gpio";
+
+			drive-strength = <2>;
+			bias-disable;
+		};
+
+		mclk0 {
+			pins = "gpio13";
+			function = "cam_mclk";
+
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
 	sdc2_default_state: sdc2-default-state {
 		clk-pins {
 			pins = "sdc2_clk";
@@ -758,4 +823,65 @@
 &slpi_pas {
 	firmware-name = "qcom/sdm845/beryllium/slpi.mbn";
         status = "okay";
+};
+
+&cci {
+	status = "okay";
+};
+
+&camss {
+	vdda-phy-supply = <&vreg_l1a_0p875>;
+	vdda-pll-supply = <&vreg_l26a_1p2>;
+
+	vdda-csi0-supply = <&vdda_mipi_csi0_0p9>;
+	vdda-csi1-supply = <&vdda_mipi_csi1_0p9>;
+	vdda-csi2-supply = <&vdda_mipi_csi2_0p9>;
+
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		port@0 {
+			reg = <0>;
+			csiphy0_ep: endpoint {
+				clock-lanes = <7>;
+				data-lanes = <0 1 2 3>;
+				remote-endpoint = <&imx363_ep>;
+			};
+		};
+	};
+};
+
+&cci_i2c0 {
+	camera@10 {
+		compatible = "sony,imx363";
+		reg = <0x10>;
+
+		reset-gpios = <&tlmm 80 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&cam0_default>;
+
+		clocks = <&clock_camcc CAM_CC_MCLK0_CLK>;
+		clock-names = "xvclk";
+		clock-frequency = <24000000>;
+
+		vif-supply = <&cam_iovdd>;
+		vana-supply = <&cam0_avdd>;
+		vdig-supply = <&cam0_dvdd>;
+
+		orientation = <1>;
+		rotation = <270>;
+
+		status = "okay";
+
+		port {
+			imx363_ep: endpoint {
+				clock-lanes = <1>;
+				data-lanes = <1 2 3 4>;
+				link-frequencies = /bits/ 64 <636000000>;
+				remote-endpoint = <&csiphy0_ep>;
+			};
+		};
+	};
 };
