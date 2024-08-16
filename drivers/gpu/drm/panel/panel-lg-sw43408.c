@@ -152,8 +152,8 @@ static int sw43408_prepare(struct drm_panel *panel)
 	return 0;
 
 poweroff:
-	gpiod_set_value(ctx->reset_gpio, 1);
-	regulator_bulk_disable(ARRAY_SIZE(ctx->supplies), ctx->supplies);
+	// gpiod_set_value(ctx->reset_gpio, 1);
+	// regulator_bulk_disable(ARRAY_SIZE(ctx->supplies), ctx->supplies);
 	return ret;
 }
 
@@ -217,7 +217,7 @@ static int sw43408_backlight_init(struct sw43408_panel *ctx)
 
 static const struct drm_panel_funcs sw43408_funcs = {
 	.disable = sw43408_disable,
-	.unprepare = sw43408_unprepare,
+	// .unprepare = sw43408_unprepare,
 	.prepare = sw43408_prepare,
 	.get_modes = sw43408_get_modes,
 };
