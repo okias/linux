@@ -65,6 +65,13 @@ else
   exit 1
 fi
 
+# Download firmware for Gen10 Arm Mali GPUs
+if [ "${DEBIAN_ARCH}" = "arm64" ]; then
+    mkdir -p firmware/arm/mali/arch10.8/
+    curl -L -o mali_csffw.bin https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/plain/arm/mali/arch10.8/mali_csffw.bin
+    mv mali_csffw.bin firmware/arm/mali/arch10.8/
+fi
+
 make() {
     command make ARCH="${KERNEL_ARCH}" CROSS_COMPILE="${CROSS_COMPILE}" "$@"
 }
@@ -124,6 +131,11 @@ fi
 for f in "${FILES_TO_UPLOAD[@]}"; do
   ci-fairy s3cp --token-file "${S3_JWT_FILE}" "$f" "https://${S3_PATH}/$(basename -a "$f")"
 done
+
+# Cleanup firmware directory for arm64
+if [ "${DEBIAN_ARCH}" = "arm64" ]; then
+  rm -rf firmware/arm/mali/arch10.8/
+fi
 
 git clean --quiet -fdx -e 'ccache/' -e '.config' -e 'defconfig' -e 'modules.tar.zst' -e 'kernels/' -e 'dtbs/'
 
