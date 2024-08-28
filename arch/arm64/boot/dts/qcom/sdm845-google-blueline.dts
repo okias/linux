@@ -6,8 +6,13 @@
 #include <dt-bindings/input/linux-event-codes.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include <dt-bindings/sound/qcom,q6afe.h>
+#include <dt-bindings/sound/qcom,q6asm.h>
+#include <dt-bindings/sound/qcom,q6afe.h>
+#include <dt-bindings/sound/qcom,q6voice.h>
 
 #include "sdm845.dtsi"
+#include "sdm845-wcd9340.dtsi"
 #include "pm8998.dtsi"
 #include "pmi8998.dtsi"
 
@@ -396,6 +401,10 @@
 	status = "okay";
 };
 
+&gpi_dma1 {
+	status = "okay";
+};
+
 &gpu {
 	status = "okay";
 
@@ -432,6 +441,61 @@
 		st,max-coords = <1079 2159>;
 		st,regulator_dvdd = "vdd";
 		st,regulator_avdd = "avdd";
+	};
+};
+
+
+&i2c12 {
+	status="okay";
+
+	cs35l36_codec1: cs35l36@40 {
+		#sound-dai-cells = <1>;
+		sound-name-prefix = "Right";
+
+		/* bottom speaker - right */
+		compatible = "cirrus,cs35l36";
+		reg = <0x40>;
+		reset-gpios = <&tlmm 112 0>;
+		VA-supply = <&vreg_s4a_1p8>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <115 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&cs35l36_reset_bottom &cs35l36_irq_bottom>;
+		cirrus,boost-ind-nanohenry = <1000>;
+		cirrus,boost-ctl-select = <0x01>;
+		cirrus,boost-ctl-millivolt = <10000>;
+		cirrus,boost-peak-milliamp = <3700>;
+		cirrus,weak-fet-delay = <0x04>;
+		cirrus,weak-fet-thld = <0x01>;
+		cirrus,temp-warn-threshold = <0x01>;
+		cirrus,multi-amp-mode;
+		cirrus,irq-drive-select = <0x00>;
+		cirrus,irq-gpio-select = <0x00>;
+	};
+
+	cs35l36_codec2: cs35l36@41 {
+		#sound-dai-cells = <1>;
+		sound-name-prefix = "Left";
+
+		/* top speaker - left */
+		compatible = "cirrus,cs35l36";
+		reg = <0x41>;
+		reset-gpios = <&tlmm 75 0>;
+		VA-supply = <&vreg_s4a_1p8>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <40 IRQ_TYPE_LEVEL_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&cs35l36_reset_top &cs35l36_irq_top>;
+		cirrus,boost-ind-nanohenry = <1000>;
+		cirrus,boost-ctl-select = <0x01>;
+		cirrus,boost-ctl-millivolt = <10000>;
+		cirrus,boost-peak-milliamp = <3700>;
+		cirrus,weak-fet-delay = <0x04>;
+		cirrus,weak-fet-thld = <0x01>;
+		cirrus,temp-warn-threshold = <0x01>;
+		cirrus,multi-amp-mode;
+		cirrus,irq-drive-select = <0x00>;
+		cirrus,irq-gpio-select = <0x00>;
 	};
 };
 
@@ -495,6 +559,28 @@
 	status = "okay";
 };
 
+&q6afedai {
+	dai@72 {
+		reg = <QUATERNARY_TDM_RX_0>;
+		qcom,tdm-sync-mode = <0>;
+		qcom,tdm-sync-src = <1>;
+		qcom,tdm-data-out = <0>;
+		qcom,tdm-invert-sync = <0>;
+		qcom,tdm-data-delay = <1>;
+		qcom,tdm-data-align = <0>;
+	};
+};
+
+&q6asmdai {
+	dai@0 {
+		reg = <0>;
+	};
+
+	dai@1 {
+		reg = <1>;
+	};
+};
+
 &qupv3_id_0 {
 	status = "okay";
 };
@@ -534,6 +620,71 @@
 &qup_uart9_tx {
 	drive-strength = <2>;
 	bias-disable;
+};
+
+&quat_mi2s_sd0_active {
+	drive-strength = <2>;
+};
+
+&quat_mi2s_sd1_active {
+	drive-strength = <2>;
+};
+
+&sound {
+	compatible = "qcom,db845c-sndcard", "qcom,sdm845-sndcard";
+	pinctrl-0 = <&quat_mi2s_active
+			&quat_mi2s_sd0_active &quat_mi2s_sd1_active>;
+	pinctrl-names = "default";
+	model = "Google Pixel 3";
+	// audio-routing =
+	// 	"RX_BIAS", "MCLK",
+	// 	"DMIC0", "MIC BIAS1",
+	// 	"DMIC3", "MIC BIAS3",
+	// 	"DMIC4", "MIC BIAS4";
+
+	mm1-dai-link {
+		link-name = "MultiMedia1";
+		cpu {
+			sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA1>;
+		};
+	};
+
+	// mm2-dai-link {
+	// 	link-name = "MultiMedia2";
+	// 	cpu {
+	// 		sound-dai = <&q6asmdai MSM_FRONTEND_DAI_MULTIMEDIA2>;
+	// 	};
+	// };
+
+	cs35l36-dai-link {
+		link-name = "Speaker Playback";
+		cpu {
+			sound-dai = <&q6afedai QUATERNARY_TDM_RX_0>;
+		};
+
+		platform {
+			sound-dai = <&q6routing>;
+		};
+
+		codec {
+			sound-dai = <&cs35l36_codec1 0>, <&cs35l36_codec2 0>;
+		};
+	};
+
+	// slimcap-dai-link {
+	// 	link-name = "SLIM WCD Capture";
+	// 	cpu {
+	// 		sound-dai = <&q6afedai SLIMBUS_0_TX>;
+	// 	};
+
+	// 	platform {
+	// 		sound-dai = <&q6routing>;
+	// 	};
+
+	// 	codec {
+	// 		sound-dai = <&wcd9340 1>; /* AIF1_CAP */
+	// 	};
+	// };
 };
 
 &tlmm {
@@ -577,6 +728,33 @@
 			drive-strength = <2>;
 			bias-disable;
 		};
+	};
+
+	cs35l36_reset_top: cs35l36_reset_top {
+		pins = "gpio75";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	cs35l36_irq_top: cs35l36_irq_top {
+		pins = "gpio40";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+	cs35l36_reset_bottom: cs35l36_reset_bottom {
+		pins = "gpio112";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	cs35l36_irq_bottom: cs35l36_irq_bottom {
+		pins = "gpio115";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
 	};
 };
 
@@ -672,6 +850,15 @@
 &venus {
 	status = "okay";
 	firmware-name = "qcom/sdm845/oneplus6/venus.mbn";
+};
+
+&wcd9340 {
+	reset-gpios = <&tlmm 64 GPIO_ACTIVE_HIGH>;
+	vdd-buck-supply = <&vreg_s4a_1p8>;
+	vdd-buck-sido-supply = <&vreg_s4a_1p8>;
+	vdd-tx-supply = <&vreg_s4a_1p8>;
+	vdd-rx-supply = <&vreg_s4a_1p8>;
+	vdd-io-supply = <&vreg_s4a_1p8>;
 };
 
 &wifi {
