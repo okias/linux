@@ -950,10 +950,22 @@ static const struct cs35l36_pll_config *cs35l36_get_clk_config(
 	return NULL;
 }
 
+static int cs35l36_set_tdm_slot(struct snd_soc_dai *dai,
+				    unsigned int tx_mask, unsigned int rx_mask,
+				    int slots, int slot_width)
+{
+	// The tdm slots are kind of configured through kcontrol such as
+	// "Channel Mux" and "ASPTX1SRC" etc. Without this function, machine
+	// driver like qcom sdm845 driver will error trying to configure the tdm slots.
+	// Not sure if this is the ideal fix. But this shouldn't cause any harm.
+	return 0;
+}
+
 static const struct snd_soc_dai_ops cs35l36_ops = {
 	.set_fmt = cs35l36_set_dai_fmt,
 	.hw_params = cs35l36_pcm_hw_params,
 	.set_sysclk = cs35l36_dai_set_sysclk,
+	.set_tdm_slot = cs35l36_set_tdm_slot,
 };
 
 #define CS35L36_RATES (		    \
