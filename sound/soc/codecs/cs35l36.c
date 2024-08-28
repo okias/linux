@@ -795,6 +795,7 @@ static int cs35l36_set_dai_fmt(struct snd_soc_dai *component_dai,
 
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
 	case SND_SOC_DAIFMT_DSP_A:
+	case SND_SOC_DAIFMT_DSP_B:
 		asp_fmt = 0;
 		break;
 	case SND_SOC_DAIFMT_I2S:
