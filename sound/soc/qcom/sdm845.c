@@ -406,6 +406,28 @@ static int sdm845_snd_startup(struct snd_pcm_substream *substream)
 					return ret;
 				}
 			}
+
+			// The cs35l36 codec needs the codec dai and component sysclk to be set here.
+			// Downstream android sdm845 machine driver does this too.
+			// Shouldn't affect any other devices unless it uses TDM RX0 and the codec
+			// doesn't like sysclk being set at this point. Mostly this shouldn't be an issue.
+			ret = snd_soc_dai_set_sysclk(codec_dai, 0,
+				     TDM_BCLK_RATE,
+				     SND_SOC_CLOCK_IN);
+			if (ret < 0) {
+				dev_err(codec_dai->dev,
+					"Failed to set codec dai sysclk: %d\n", ret);
+				return ret;
+			}
+
+			ret = snd_soc_component_set_sysclk(codec_dai->component, 0, 0,
+					TDM_BCLK_RATE,
+					SND_SOC_CLOCK_IN);
+			if (ret < 0) {
+				dev_err(codec_dai->dev,
+					"Failed to set codec component sysclk: %d\n", ret);
+				return ret;
+			}
 		}
 		break;
 	case SLIMBUS_0_RX...SLIMBUS_6_TX:
