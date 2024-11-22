@@ -2889,6 +2889,16 @@ static int ccs_identify_module(struct ccs_sensor *sensor)
 		break;
 	}
 
+	if (!device_property_read_string(&client->dev, "camera_module_canonical",
+					 &minfo->module_ident_canonical))
+		dev_dbg(&client->dev, "using canonical module identity %s\n",
+			minfo->module_ident_canonical);
+	else if (!device_property_read_u32(&client->dev,
+					     "camera_module_casual",
+					     &minfo->module_ident_non_canonical))
+		dev_dbg(&client->dev, "using non-canonical module identity %u\n",
+			minfo->module_ident_non_canonical);
+
 	dev_dbg(&client->dev, "the sensor is called %s\n", minfo->name);
 
 	return 0;
@@ -3215,6 +3225,16 @@ static int ccs_firmware_name(struct i2c_client *client,
 			sensor->minfo.smia_manufacturer_id;
 		model_id = sensor->minfo.model_id;
 		revision_number = sensor->minfo.revision_number;
+
+		if (sensor->minfo.module_ident_canonical)
+			return snprintf(filename, filename_size,
+					"ccs/canonical/module-%s.fw",
+					sensor->minfo.module_ident_canonical);
+
+		if (sensor->minfo.module_ident_non_canonical)
+			return snprintf(filename, filename_size,
+					"ccs/non-canonical/module-%u.fw",
+					sensor->minfo.module_ident_non_canonical);
 	} else {
 		manufacturer_id = is_ccs ?
 			sensor->minfo.sensor_mipi_manufacturer_id :
