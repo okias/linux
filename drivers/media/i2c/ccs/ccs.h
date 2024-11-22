@@ -123,6 +123,9 @@ struct ccs_module_info {
 
 	char *name;
 	const struct ccs_quirk *quirk;
+
+	const char *module_ident_canonical;
+	u32 module_ident_non_canonical;
 };
 
 #define CCS_IDENT_FQ(manufacturer, model, rev, fl, _name, _quirk)	\
