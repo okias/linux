@@ -2714,6 +2714,30 @@ static int ccs_identify_module(struct ccs_sensor *sensor)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&sensor->src->sd);
 	struct ccs_module_info *minfo = &sensor->minfo;
+	const struct minfo_fields {
+		u32 *val;
+		const char * const name;
+	} minfo_fields[] = {
+		{
+			&minfo->sensor_mipi_manufacturer_id,
+			"mipi,sensor-manufacturer-id"
+		}, {
+			&minfo->sensor_model_id,
+			"mipi,sensor-model-id"
+		}, {
+			&minfo->sensor_revision_number,
+			"mipi,sensor-revision"
+		}, {
+			&minfo->mipi_manufacturer_id,
+			"mipi,module-manufacturer-id"
+		}, {
+			&minfo->model_id,
+			"mipi,module-model-id"
+		}, {
+			&minfo->revision_number,
+			"mipi,module-revision"
+		}
+	};
 	unsigned int i;
 	u32 rev;
 	int rval = 0;
@@ -2774,6 +2798,18 @@ static int ccs_identify_module(struct ccs_sensor *sensor)
 	if (rval) {
 		dev_err(&client->dev, "sensor detection failed\n");
 		return -ENODEV;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(minfo_fields); i++) {
+		const struct minfo_fields *mf = &minfo_fields[i];
+		u32 val;
+
+		if (device_property_read_u32(&client->dev, mf->name, &val))
+			continue;
+
+		dev_dbg(&client->dev,
+			"using %s 0x%8.8x from firmware", mf->name, val);
+		*mf->val = val;
 	}
 
 	if (minfo->mipi_manufacturer_id)
