@@ -268,7 +268,8 @@ static int vc_sm_cma_vchi_videocore_io(void *arg)
 static int vc_sm_cma_vchi_callback(struct vchiq_instance *vchiq_instance,
 				   enum vchiq_reason reason,
 				   struct vchiq_header *header,
-				   unsigned int handle, void *userdata)
+				   unsigned int handle, void *userdata,
+				   void __user *cb_userdata)
 {
 	struct sm_instance *instance = vchiq_get_service_userdata(vchiq_instance, handle);
 
