@@ -3221,6 +3221,23 @@ static int ccs_firmware_name(struct i2c_client *client,
 			sensor->minfo.sensor_smia_manufacturer_id;
 		model_id = sensor->minfo.sensor_model_id;
 		revision_number = sensor->minfo.sensor_revision_number;
+
+		/*
+		 * Find the sensor CCS static data file for effectively
+		 * compliant devices.
+		 */
+		const char *compatible;
+		int ret;
+
+		ret = device_property_read_string(&client->dev,
+						  "compatible",
+						  &compatible);
+		if (!ret &&
+		    strstr(compatible, "mipi-ccs") != compatible &&
+		    strstr(compatible, "nokia,smia") != compatible)
+			return snprintf(filename, filename_size,
+					"ccs/compatible/sensor-%s.fw",
+					compatible);
 	}
 
 	return snprintf(filename, filename_size,
