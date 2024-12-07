@@ -49,6 +49,18 @@ properties:
     $ref: /schemas/types.yaml#/definitions/uint16
     description: The MIPI sensor revision.
 
+  mipi,module-vendor-id:
+    $ref: /schemas/types.yaml#/definitions/uint16
+    description: The MIPI module vendor ID.
+
+  mipi,module-device-id:
+    $ref: /schemas/types.yaml#/definitions/uint16
+    description: The MIPI module device ID.
+
+  mipi,module-revision:
+    $ref: /schemas/types.yaml#/definitions/uint16
+    description: The MIPI module revision.
+
   vana-supply:
     description: Analogue voltage supply (VANA), sensor dependent.
 
