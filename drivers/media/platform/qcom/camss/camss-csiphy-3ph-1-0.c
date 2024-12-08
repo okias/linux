@@ -1079,6 +1079,7 @@ static int csiphy_init(struct csiphy_device *csiphy)
 {
 	struct device *dev = csiphy->camss->dev;
 	struct csiphy_device_regs *regs;
+	struct csiphy_lanes_cfg *c = &csiphy->cfg.csi2->lane_cfg;
 
 	regs = devm_kmalloc(dev, sizeof(*regs), GFP_KERNEL);
 	if (!regs)
