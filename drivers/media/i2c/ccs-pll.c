@@ -9,6 +9,8 @@
  * Contact: Sakari Ailus <sakari.ailus@linux.intel.com>
  */
 
+#define DEBUG
+
 #include <linux/device.h>
 #include <linux/gcd.h>
 #include <linux/lcm.h>
