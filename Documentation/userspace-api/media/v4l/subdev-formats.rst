@@ -3851,6 +3851,8 @@ organization is given as an example for the first pixel only.
 
     \endgroup
 
+.. _v4l2-mbus-pixelcode-generic-raw:
+
 Generic raw formats on serial interfaces
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
