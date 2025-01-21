@@ -57,6 +57,10 @@
 	compatible = "samsung,s6e3fc2x01";
 };
 
+&framebuffer {
+	height = <2340>;
+};
+
 &i2c4 {
 	status = "okay";
 	clock-frequency = <400000>;
