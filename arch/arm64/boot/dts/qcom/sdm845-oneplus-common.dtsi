@@ -582,7 +582,7 @@
 		compatible = "sony,imx519";
 		reg = <0x1a>;
 
-		reset-gpios = <&tlmm 28 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&tlmm 28 GPIO_ACTIVE_LOW>;
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&main_cam_default>;
 		pinctrl-1 = <&main_cam_sleep>;
@@ -617,7 +617,7 @@
 		compatible = "sony,imx371";
 		reg = <0x10>;
 
-		reset-gpios = <&tlmm 9 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&tlmm 9 GPIO_ACTIVE_LOW>;
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&front_cam_default>;
 		pinctrl-1 = <&front_cam_sleep>;
@@ -658,7 +658,7 @@
 		compatible = "sony,imx376k";
 		reg = <0x10>;
 
-		reset-gpios = <&tlmm 23 GPIO_ACTIVE_HIGH>;
+		reset-gpios = <&tlmm 23 GPIO_ACTIVE_LOW>;
 		pinctrl-names = "default", "sleep";
 		pinctrl-0 = <&sub_cam_default>;
 		pinctrl-1 = <&sub_cam_sleep>;
