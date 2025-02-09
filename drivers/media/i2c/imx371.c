@@ -966,7 +966,7 @@ static int imx371_power_on(struct device *dev)
 
 	usleep_range(400, 600);
 
-	gpiod_set_value_cansleep(imx371->reset_gpio, 1);
+	gpiod_set_value_cansleep(imx371->reset_gpio, 0);
 
 	ret = clk_prepare_enable(imx371->clk);
 	if (ret) {
@@ -986,7 +986,7 @@ static int imx371_power_off(struct device *dev)
 
 	clk_disable_unprepare(imx371->clk);
 
-	gpiod_set_value_cansleep(imx371->reset_gpio, 0);
+	gpiod_set_value_cansleep(imx371->reset_gpio, 1);
 
 	regulator_bulk_disable(IMX371_NUM_SUPPLIES, imx371->supplies);
 
