@@ -970,13 +970,18 @@ static int imx371_power_on(struct device *dev)
 
 	ret = clk_prepare_enable(imx371->clk);
 	if (ret) {
-		dev_err(dev, "failed to enable clock\n");
-		regulator_bulk_disable(IMX371_NUM_SUPPLIES, imx371->supplies);
+		dev_err(dev, "failed to enable inclk\n");
+		goto error_reset;
 	}
 
 	usleep_range(1000, 1200);
 
 	return 0;
+error_reset:
+	gpiod_set_value_cansleep(imx371->reset_gpio, 1);
+	regulator_bulk_disable(IMX371_NUM_SUPPLIES, imx371->supplies);
+
+	return ret;
 }
 
 static int imx371_power_off(struct device *dev)
