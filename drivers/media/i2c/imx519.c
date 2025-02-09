@@ -1577,7 +1577,7 @@ static int imx519_power_on(struct device *dev)
 		goto reg_off;
 	}
 
-	gpiod_set_value_cansleep(imx519->reset_gpio, 1);
+	gpiod_set_value_cansleep(imx519->reset_gpio, 0);
 	usleep_range(IMX519_XCLR_MIN_DELAY_US,
 		     IMX519_XCLR_MIN_DELAY_US + IMX519_XCLR_DELAY_RANGE_US);
 
@@ -1594,7 +1594,7 @@ static int imx519_power_off(struct device *dev)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct imx519 *imx519 = to_imx519(sd);
 
-	gpiod_set_value_cansleep(imx519->reset_gpio, 0);
+	gpiod_set_value_cansleep(imx519->reset_gpio, 1);
 	regulator_bulk_disable(ARRAY_SIZE(imx519_supply_name), imx519->supplies);
 	clk_disable_unprepare(imx519->xclk);
 
@@ -1921,7 +1921,7 @@ static int imx519_probe(struct i2c_client *client)
 
 	/* Request optional enable pin */
 	imx519->reset_gpio = devm_gpiod_get_optional(dev, "reset",
-						     GPIOD_OUT_HIGH);
+						     GPIOD_OUT_LOW);
 
 	/*
 	 * The sensor must be powered for imx519_identify_module()
