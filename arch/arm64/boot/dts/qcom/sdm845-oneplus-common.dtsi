@@ -648,6 +648,12 @@
 };
 
 &cci_i2c1 {
+	sub_cam_actuator: actuator@74 {
+		compatible = "onnn,lc898217xc";
+		reg = <0x74>;
+		vcc-supply = <&sub_cam_vaf>;
+	};
+
 	sub_cam: camera@10 {
 		compatible = "sony,imx376k";
 		reg = <0x10>;
@@ -669,6 +675,8 @@
 
 		orientation = <1>; /* Rear camera */
 		rotation = <270>;
+
+		lens-focus = <&sub_cam_actuator>;
 
 		status = "okay";
 
