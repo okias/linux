@@ -14,6 +14,7 @@
 #include <dt-bindings/sound/qcom,q6afe.h>
 #include <dt-bindings/sound/qcom,q6asm.h>
 #include <dt-bindings/sound/qcom,wcd934x.h>
+#include <dt-bindings/sound/qcom,q6voice.h>
 
 #include "sdm845.dtsi"
 #include "pm8998.dtsi"
@@ -122,6 +123,11 @@
 			no-map;
 		};
 
+		fb_mem: memory@95800000 {
+			reg = <0 0x95800000 0 0x500000>;
+			no-map;
+		};
+
 		adsp_mem: memory@97800000 {
 			reg = <0 0x97800000 0 0x2000000>;
 			no-map;
@@ -135,6 +141,34 @@
 
 			qcom,client-id = <1>;
 			qcom,vmid = <QCOM_SCM_VMID_MSS_MSA>;
+		};
+	};
+
+	i2c18 {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm 62 GPIO_ACTIVE_HIGH>;
+		scl-gpios = <&tlmm 63 GPIO_ACTIVE_HIGH>;
+		i2c-gpio,delay-us = <2>;
+		pinctrl-0 = <&i2c18_sda_state &i2c18_scl_state>;
+		pinctrl-names = "default";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		max98512_codec: max98512@39 {
+			compatible = "maxim,max98512";
+			#sound-dai-cells = <0>;
+			reg = <0x39>;
+			maxim,spk-gain = <0x5>;
+			maxim,spk-gain-rcv = <0x1>;
+			maxim,digital-gain-rcv = <0x34>;
+			maxim,sysclk = <0xbb8000>;
+			maxim,vmon_slot = <0x1>;
+			maxim,platform_info = <0x1 0x1006 0x10001062 0x1ff1020b 0x0 0x33>;
+			maxim,boost_step = <0xf 0xf 0xf 0xf 0xf 0xf 0xf 0xf 0xf 0xf 0xf 0xf 0xf 0xf 0x2 0x0>;
+			maxim,registers-of-amp = <0x1f 0x0 0x21 0xc0 0x2d 0x14 0x2f 0x0>;
+			maxim,sub_reg = <0x3a>;
+			maxim,mono_stereo = <0x1>;
+			interleave_mode = <0x1>;
 		};
 	};
 
@@ -753,6 +787,28 @@
 		};
 	};
 
+	voicemmode1-dai-link {
+		link-name = "VoiceMMode1";
+		cpu {
+			sound-dai = <&q6voicedai VOICEMMODE1>;
+		};
+	};
+
+	speaker-dai-link {
+		link-name = "Speaker Playback";
+		codec {
+			sound-dai = <&max98512_codec>;
+		};
+
+		cpu {
+			sound-dai = <&q6afedai QUATERNARY_MI2S_RX>;
+		};
+
+		platform {
+			sound-dai = <&q6routing>;
+		};
+	};
+
 	slim-dai-link {
 		link-name = "SLIM Playback 1";
 
@@ -872,6 +928,18 @@
 	};
 };
 
+&q6cvp {
+	status = "okay";
+};
+
+&q6cvs {
+	status = "okay";
+};
+
+&q6mvm {
+	status = "okay";
+};
+
 &wcd9340 {
 	reset-gpios = <&tlmm 64 GPIO_ACTIVE_HIGH>;
 	vdd-buck-supply = <&vreg_s4a_1p8>;
@@ -896,6 +964,14 @@
 	memory-region = <&ipa_fw_mem>;
 	firmware-name = "qcom/sdm845/starqltechn/ipa_fws.mbn";
 	status = "okay";
+};
+
+&slpi_pas {
+	firmware-name = "qcom/sdm845/starqltechn/slpi.mbn";
+	status = "okay";
+
+//	vdd-cx-supply = <&vdd-l1-l27-supply>;
+//	vdd-cx-supply = <&vdd-l4-l5-supply>;
 };
 
 &usb_1 {
@@ -1022,6 +1098,20 @@
 		pins = "gpio126";
 		function = "gpio";
 		bias-pull-up;
+	};
+
+	i2c18_sda_state: i2c18-sda-state {
+		pins = "gpio62";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	i2c18_scl_state: i2c18-scl-state {
+		pins = "gpio63";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
 	};
 
 	touch_irq_state: touch-irq-state {
