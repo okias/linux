@@ -31,6 +31,8 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		ranges;
+
+		stdout-path = "serial0:115200n8";
 	};
 
 	reserved-memory {
@@ -152,6 +154,11 @@
 		regulator-boot-on;
 
 		vin-supply = <&vph_pwr>;
+	};
+
+
+	aliases {
+		serial0 = &uart9;
 	};
 };
 
@@ -588,4 +595,24 @@
 		bias-pull-up;
 		qcom,drive-strength = <PMIC_GPIO_STRENGTH_NO>;
 	};
+};
+
+
+&qup_uart9_rx {
+	drive-strength = <2>;
+	bias-pull-up;
+};
+
+&qup_uart9_tx {
+	drive-strength = <2>;
+	bias-disable;
+};
+
+&uart9 {
+	label = "LS-UART1";
+	status = "okay";
+};
+
+&qupv3_id_1 {
+	status = "okay";
 };
