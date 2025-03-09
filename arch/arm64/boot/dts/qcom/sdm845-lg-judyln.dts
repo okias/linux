@@ -8,10 +8,12 @@
 /dts-v1/;
 
 #include "sdm845-lg-common.dtsi"
+#include <dt-bindings/leds/common.h>
 
 / {
 	model = "LG G7 ThinQ";
 	compatible = "lg,judyln", "qcom,sdm845";
+	chassis-type = "handset";
 
 	chosen {
 		framebuffer@9d400000 {
@@ -37,6 +39,32 @@
 			interrupts = <89 IRQ_TYPE_LEVEL_LOW>;
 		};
 	};
+
+	gpio-hall-sensor {
+		compatible = "gpio-keys";
+		label = "Hall effect sensor";
+
+		pinctrl-0 = <&hall_sensor_default>;
+		pinctrl-names = "default";
+
+		event-hall-sensor {
+			gpios = <&tlmm 124 GPIO_ACTIVE_LOW>;
+			label = "Hall Effect Sensor";
+			linux,input-type = <EV_SW>;
+			linux,code = <SW_LID>;
+			linux,can-disable;
+			wakeup-source;
+		};
+	};
+
+	battery: battery {
+		status = "okay";
+		compatible = "simple-battery";
+
+		charge-full-design-microamp-hours = <3300000>;
+		voltage-min-design-microvolt = <3400000>;
+		voltage-max-design-microvolt = <4400000>;
+	};
 };
 
 &adsp_pas {
@@ -47,14 +75,31 @@
 	firmware-name = "qcom/sdm845/judyln/cdsp.mbn";
 };
 
+&gmu {
+	status = "okay";
+};
+
 &gpu {
+	status = "okay";
+
 	zap-shader {
+		memory-region = <&gpu_mem>;
 		firmware-name = "qcom/sdm845/judyln/a630_zap.mbn";
 	};
 };
 
+&ipa {
+	qcom,gsi-loader = "self";
+	memory-region = <&ipa_fw_mem>;
+	firmware-name = "qcom/sdm845/judyln/ipa_fws.mbn";
+};
+
 &mss_pil {
 	firmware-name = "qcom/sdm845/judyln/mba.mbn", "qcom/sdm845/judyln/modem.mbn";
+};
+
+&venus {
+	firmware-name = "qcom/sdm845/judyln/venus.mbn";
 };
 
 &tlmm {
@@ -65,4 +110,303 @@
 		drive-strength = <2>;
 		bias-pull-up;
 	};
+
+	hall_sensor_default: hall-sensor-default-state {
+		pins = "gpio4";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-disable;
+	};
+
+	qupv3_se11_spi_pins: qupv3_se11_spi_pins {
+		qupv3_se11_spi_active: qupv3_se11_spi_active {
+			mux {
+				pins = "gpio31", "gpio32", "gpio33",
+							"gpio34";
+				function = "qup11";
+			};
+
+			config {
+				pins = "gpio31", "gpio32", "gpio33",
+							"gpio34";
+				drive-strength = <6>;
+				bias-disable;
+			};
+		};
+
+		qupv3_se11_spi_sleep: qupv3_se11_spi_sleep {
+			mux {
+				pins = "gpio31", "gpio32", "gpio33",
+							"gpio34";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio31", "gpio32", "gpio33",
+							"gpio34";
+				drive-strength = <6>;
+				bias-disable;
+			};
+		};
+	};
+
+	sde_dsi_active: sde-dsi-active-state {
+		pins = "gpio6";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-disable;
+	};
+
+	sde_dsi_sleep: sde-dsi-sleep-state {
+		pins = "gpio6";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-down;
+	};
+
+	sde_te_active_sleep: sde-te-active-sleep-state {
+		pins = "gpio10";
+		function = "mdp_vsync";
+		drive-strength = <2>;
+		bias-pull-down;
+	};
+};
+
+&mdss {
+	status = "okay";
+};
+
+&mdss_dsi0 {
+	status = "okay";
+	vdda-supply = <&vdda_mipi_dsi0_1p2>;
+
+	display_panel: panel@0 {
+		status = "okay";
+		reg = <0>;
+		vddi-supply = <&vreg_l14a_1p88>;
+		vpnl-supply = <&vreg_l28a_3p0>;
+		reset-gpios = <&tlmm 6 GPIO_ACTIVE_LOW>;
+
+		backlight = <&pmi8998_wled>;
+		pinctrl-0 = <&sde_dsi_active &sde_te_active_sleep>;
+		pinctrl-1 = <&sde_dsi_sleep &sde_te_active_sleep>;
+		pinctrl-names = "default", "sleep";
+
+		port {
+			panel_in: endpoint {
+				remote-endpoint = <&mdss_dsi0_out>;
+			};
+		};
+	};
+};
+
+&mdss_dsi0_phy {
+	status = "okay";
+	vdds-supply = <&vdda_mipi_dsi0_pll>;
+};
+
+&mdss_dsi0_out {
+	remote-endpoint = <&panel_in>;
+	data-lanes = <0 1 2 3>;
+};
+
+&qupv3_id_0 {
+	status = "okay";
+};
+
+&pmi8998_charger {
+	status = "okay";
+	monitored-battery = <&battery>;
+};
+
+&pmi8998_fg {
+	status = "okay";
+	monitored-battery = <&battery>;
+	power-supplies = <&pmi8998_charger>;
+};
+
+&pmi8998_haptics {
+	status = "okay";
+	reg = <0xc000 0x100>;
+
+	qcom,wave-play-rate-us = <4255>;
+};
+
+&pmi8998_lpg {
+	status = "okay";
+
+	led@0 {
+		label = "blue";
+		reg = <3>;
+		color = <LED_COLOR_ID_BLUE>;
+		default-state = "off";
+	};
+
+	led@1 {
+		label = "green";
+		reg = <4>;
+		color = <LED_COLOR_ID_GREEN>;
+		default-state = "off";
+	};
+
+	led@2 {
+		label = "red";
+		reg = <5>;
+		color = <LED_COLOR_ID_RED>;
+		default-state = "off";
+	};
+};
+
+&pmi8998_wled {
+	status = "okay";
+	qcom,current-boost-limit = <970>;
+	qcom,ovp-millivolt = <29600>;
+	qcom,current-limit-microamp = <20000>;
+	qcom,num-strings = <2>;
+	qcom,switching-freq = <600>;
+	qcom,external-pfet;
+	qcom,cabc;
+};
+
+&pmi8998_flash {
+	status = "okay";
+
+	led-0 {
+		label = "flash";
+		function = LED_FUNCTION_FLASH;
+		color = <LED_COLOR_ID_WHITE>;
+		led-sources = <1>;
+		led-max-microamp = <850000>;
+		flash-max-microamp = <850000>;
+		flash-max-timeout-us = <500000>;
+	};
+
+};
+
+&spi7 {
+	status = "okay";
+};
+
+&spi15 {
+	status = "okay";
+
+	num-cs = <1>;
+	clock-frequency = <50000000>;
+
+	sw49410@0 {
+		compatible = "siw,sw49410";
+		reg = <0>;
+		status = "okay";
+		interrupt-parent = <&tlmm>;
+		interrupts = <31 0x2008>;
+		irqflags = <0x00000002>;
+		spi-max-frequency = <50000000>;
+
+		reset-gpio = <&tlmm 32 0x00>;
+		irq-gpio = <&tlmm 31 0x2008>;
+
+		/* caps */
+		max_x = <1439>;
+		max_y = <3119>;
+		max_pressure = <0xff>;
+		max_width_major = <1439>;
+		max_width_minor = <3119>;
+		max_orientation = <90>;
+		max_id = <10>;
+		hw_reset_delay = <90>;
+		sw_reset_delay = <10>;
+
+		/* role */
+		use_lpwg = <1>;
+		use_lpwg_test = <1>;
+		hide_coordinate = <1>;
+
+		/* firmware */
+		fw_image = "touch/judyln/SW49410_L0W60NEO_1_07.img";
+
+		panel_spec = "touch/judyln/judyln_limit.txt";
+		panel_spec_mfts_folder = "touch/judyln/judyln_limit_mfts.txt";
+
+		/* asc */
+		use_asc = <0>;
+		low_delta_thres = <350>;
+		high_delta_thres = <600>;
+		max_delta_cnt = <2>;
+
+		/* Performance Test */
+		use_perf_test = <1>;
+		test_delay = <8>;
+		test_pressure = <50>;
+		test_width = <100>;
+		click_test_x = <180>;
+		click_test_y = <760>;
+		v_drag_test_x = <144>;
+		v_drag_test_start_y = <2003>;
+		v_drag_test_end_y = <1116>;
+		h_drag_test_start_x = <1163>;
+		h_drag_test_end_x = <276>;
+		h_drag_test_y = <2184>;
+	};
+};
+
+&uart6 {
+	status = "okay";
+
+	pinctrl-0 = <&qup_uart6_4pin>;
+
+	bluetooth {
+		compatible = "qcom,wcn3990-bt";
+
+		/*
+		 * This path is relative to the qca/
+		 * subdir under lib/firmware.
+		 */
+		firmware-name = "judyln/crnv21.bin";
+
+		vddio-supply = <&vreg_s4a_1p8>;
+		vddxo-supply = <&vreg_l7a_1p8>;
+		vddrf-supply = <&vreg_l17a_1p3>;
+		vddch0-supply = <&vreg_l25a_3p3>;
+		max-speed = <3200000>;
+	};
+};
+
+&i2c3 {
+	status = "okay";
+};
+
+&i2c12 {
+	status = "okay";
+};
+
+&i2c14 {
+	status = "okay";
+};
+
+&i2c10 {
+	status = "okay";
+
+	tfa9894_codec: tfa9894@34 {
+		#sound-dai-cells = <1>;
+		compatible = "nxp,tfa9894";
+		reg = <0x34>;
+	};
+};
+
+&wifi {
+	status = "okay";
+	vdd-0.8-cx-mx-supply = <&vreg_l5a_0p8>;
+	vdd-1.8-xo-supply = <&vreg_l7a_1p8>;
+	vdd-1.3-rfa-supply = <&vreg_l17a_1p3>;
+	vdd-3.3-ch0-supply = <&vreg_l25a_3p3>;
+	vdd-3.3-ch1-supply = <&vreg_l23a_3p3>;
+
+	qcom,snoc-host-cap-8bit-quirk;
+};
+
+&usb_1_dwc3 {
+	dr_mode = "peripheral";
+	maximum-speed = "super-speed";
+	usb-role-switch;
 };
