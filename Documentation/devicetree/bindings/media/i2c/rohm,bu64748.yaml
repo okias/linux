@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: (GPL-2.0 OR BSD-2-Clause)
+# Copyright 2025 Joel Selvaraj <foss@joelselvaraj.com>
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/media/i2c/rohm,bu64748.yaml##
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: ROHM BU64748 Voice Coil Motor (VCM) Lens
+
+maintainers:
+  - Joel Selvaraj <foss@joelselvaraj.com>
+
+description:
+  The BU64748 is a 12-bit digital-to-analog (DAC) converter.
+  VCM current is controlled with linear mode driver. The DAC is controlled
+  via 2-wire (I2C-compatible) serial interface. This chip is intended for
+  driving voice coil lenses in camera modules.
+
+properties:
+  compatible:
+    enum:
+      - rohm,bu64748
+
+  reg:
+    maxItems: 1
+
+  vcc-supply:
+    description:
+      VCM power supply.
+
+  vio-supply:
+    description:
+      I/O power supply of the CCI i2c interface.
+
+required:
+  - compatible
+  - reg
+  - vcc-supply
+
+additionalProperties: false
+
+examples:
+  - |
+
+    i2c {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        camera-lens@c {
+            compatible = "rohm,bu64748";
+            reg = <0x0c>;
+
+            vcc-supply = <&cam_actuator_reg>;
+            vio-supply = <&cam_iovdd>;
+        };
+    };
+...
