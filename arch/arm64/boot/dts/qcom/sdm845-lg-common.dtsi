@@ -40,20 +40,17 @@
 		#size-cells = <2>;
 		ranges;
 
-		qseecom_mem: memory@b2000000 {
-			reg = <0 0xb2000000 0 0x1800000>;
+		ipa_fw_mem: memory@8c400000 {
+			reg = <0 0x8c400000 0 0x10000>;
 			no-map;
 		};
+
 
 		gpu_mem: memory@8c415000 {
 			reg = <0 0x8c415000 0 0x2000>;
 			no-map;
 		};
 
-		ipa_fw_mem: memory@8c400000 {
-			reg = <0 0x8c400000 0 0x10000>;
-			no-map;
-		};
 
 		adsp_mem: memory@8c500000 {
 			reg = <0 0x8c500000 0 0x1e00000>;
@@ -92,6 +89,11 @@
 
 		spss_mem: memory@99000000 {
 			reg = <0 0x99000000 0 0x100000>;
+			no-map;
+		};
+
+		qseecom_mem: memory@b2000000 {
+			reg = <0 0xb2000000 0 0x1800000>;
 			no-map;
 		};
 
@@ -159,11 +161,8 @@
 
 	aliases {
 		serial0 = &uart9;
+		serial1 = &uart6;
 	};
-};
-
-&adsp_pas {
-	status = "okay";
 };
 
 &apps_rsc {
@@ -450,12 +449,15 @@
 	};
 };
 
-&cdsp_pas {
+
+&adsp_pas {
 	status = "okay";
+	firmware-name = "qcom/sdm845/judy/adsp.mbn";
 };
 
-&dispcc {
-	status = "disabled";
+&cdsp_pas {
+	status = "okay";
+	firmware-name = "qcom/sdm845/judy/cdsp.mbn";
 };
 
 &gcc {
@@ -471,22 +473,37 @@
 
 	zap-shader {
 		memory-region = <&gpu_mem>;
+		firmware-name = "qcom/sdm845/judy/a630_zap.mbn";
 	};
 };
 
 &ipa {
 	qcom,gsi-loader = "modem";
+	memory-region = <&ipa_fw_mem>;
+	firmware-name = "qcom/sdm845/judy/ipa_fws.mbn";
 	status = "okay";
 };
 
 &mss_pil {
 	status = "okay";
+	firmware-name = "qcom/sdm845/judy/mba.mbn", "qcom/sdm845/judy/modem.mbn";
 };
 
 &pm8998_resin {
-	linux,code = <KEY_VOLUMEDOWN>;
 	status = "okay";
+	linux,code = <KEY_VOLUMEDOWN>;
 };
+
+&qup_uart9_rx {
+	drive-strength = <2>;
+	bias-pull-up;
+};
+
+&qup_uart9_tx {
+	drive-strength = <2>;
+	bias-disable;
+};
+
 
 &sdhc_2 {
 	status = "okay";
@@ -498,6 +515,86 @@
 
 	vmmc-supply = <&vreg_l21a_2p95>;
 	vqmmc-supply = <&vddpx_2>;
+};
+
+/* PINCTRL - additions to nodes defined in sdm845.dtsi */
+&tlmm {
+	gpio-reserved-ranges = <28 4>, <81 4>;
+
+	sdc2_clk: sdc2-clk-state {
+		pins = "sdc2_clk";
+		bias-disable;
+
+		/*
+		 * It seems that mmc_test reports errors if drive
+		 * strength is not 16 on clk, cmd, and data pins.
+		 *
+		 * TODO: copy-pasted from mtp, try other values
+		 * on these devices.
+		 */
+		drive-strength = <16>;
+	};
+
+	sdc2_cmd: sdc2-cmd-state {
+		pins = "sdc2_cmd";
+		bias-pull-up;
+		drive-strength = <16>;
+	};
+
+	sdc2_data: sdc2-data-state {
+		pins = "sdc2_data";
+		bias-pull-up;
+		drive-strength = <16>;
+	};
+
+	sd_card_det_n: sd-card-det-n-state {
+		pins = "gpio126";
+		function = "gpio";
+		bias-pull-up;
+	};
+};
+
+
+
+&pm8998_gpios {
+	vol_up_pin_a: vol-up-active-state {
+		pins = "gpio6";
+		function = "normal";
+		input-enable;
+		bias-pull-up;
+		qcom,drive-strength = <PMIC_GPIO_STRENGTH_NO>;
+	};
+};
+
+
+
+&qupv3_id_1 {
+	status = "okay";
+};
+
+&uart6 {
+	status = "okay";
+	pinctrl-0 = <&qup_uart6_4pin>;
+
+	bluetooth {
+		compatible = "qcom,wcn3990-bt";
+		/*
+		 * This path is relative to the qca/
+		 * subdir under lib/firmware.
+		 */
+		firmware-name = "judy/crnv21.bin";
+
+		vddio-supply = <&vreg_s4a_1p8>;
+		vddxo-supply = <&vreg_l7a_1p8>;
+		vddrf-supply = <&vreg_l17a_1p3>;
+		vddch0-supply = <&vreg_l25a_3p3>;
+		max-speed = <3200000>;
+	};
+};
+
+&uart9 {
+	label = "LS-UART1";
+	status = "okay";
 };
 
 /*
@@ -549,70 +646,20 @@
 	vdda-pll-supply = <&vdda_usb1_ss_core>;
 };
 
-/* PINCTRL - additions to nodes defined in sdm845.dtsi */
 
-&tlmm {
-	gpio-reserved-ranges = <28 4>, <81 4>;
-
-	sdc2_clk: sdc2-clk-state {
-		pins = "sdc2_clk";
-		bias-disable;
-
-		/*
-		 * It seems that mmc_test reports errors if drive
-		 * strength is not 16 on clk, cmd, and data pins.
-		 *
-		 * TODO: copy-pasted from mtp, try other values
-		 * on these devices.
-		 */
-		drive-strength = <16>;
-	};
-
-	sdc2_cmd: sdc2-cmd-state {
-		pins = "sdc2_cmd";
-		bias-pull-up;
-		drive-strength = <16>;
-	};
-
-	sdc2_data: sdc2-data-state {
-		pins = "sdc2_data";
-		bias-pull-up;
-		drive-strength = <16>;
-	};
-
-	sd_card_det_n: sd-card-det-n-state {
-		pins = "gpio126";
-		function = "gpio";
-		bias-pull-up;
-	};
-};
-
-&pm8998_gpios {
-	vol_up_pin_a: vol-up-active-state {
-		pins = "gpio6";
-		function = "normal";
-		input-enable;
-		bias-pull-up;
-		qcom,drive-strength = <PMIC_GPIO_STRENGTH_NO>;
-	};
-};
-
-
-&qup_uart9_rx {
-	drive-strength = <2>;
-	bias-pull-up;
-};
-
-&qup_uart9_tx {
-	drive-strength = <2>;
-	bias-disable;
-};
-
-&uart9 {
-	label = "LS-UART1";
+&venus {
 	status = "okay";
+	firmware-name = "qcom/sdm845/judy/venus.mbn";
 };
 
-&qupv3_id_1 {
+&wifi {
 	status = "okay";
+	vdd-0.8-cx-mx-supply = <&vreg_l5a_0p8>;
+	vdd-1.8-xo-supply = <&vreg_l7a_1p8>;
+	vdd-1.3-rfa-supply = <&vreg_l17a_1p3>;
+	vdd-3.3-ch0-supply = <&vreg_l25a_3p3>;
+	vdd-3.3-ch1-supply = <&vreg_l23a_3p3>;
+
+	qcom,snoc-host-cap-skip-quirk;
+	qcom,ath10k-calibration-variant = "lg_judy";
 };
