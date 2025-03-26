@@ -28,7 +28,7 @@
 #include "vc_sm.h"
 #include "vc_sm_knl.h"
 
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 
 /* ---- Private Constants and Types --------------------------------------- */
 
