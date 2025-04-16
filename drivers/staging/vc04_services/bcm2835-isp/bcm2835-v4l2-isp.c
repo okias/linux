@@ -26,7 +26,7 @@
 #include "bcm2835-isp-ctrls.h"
 #include "bcm2835-isp-fmts.h"
 
-MODULE_IMPORT_NS(DMA_BUF);
+MODULE_IMPORT_NS("DMA_BUF");
 
 /*
  * We want to instantiate 2 independent instances allowing 2 simultaneous users
