@@ -943,6 +943,8 @@
 };
 
 &q6voicedai {
+	qcom,cvd-v2.3;
+
 	dai@1 {
 		reg = <VOICEMMODE1>;
 	};
