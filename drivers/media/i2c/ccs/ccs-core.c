@@ -3206,7 +3206,8 @@ out_err:
 
 static int ccs_firmware_name(struct i2c_client *client,
 			     struct ccs_sensor *sensor, char *filename,
-			     size_t filename_size, bool is_module)
+			     size_t filename_size, bool is_module,
+			     bool use_version)
 {
 	const struct ccs_device *ccsdev = device_get_match_data(&client->dev);
 	bool is_ccs = !(ccsdev->flags & CCS_DEVICE_FLAG_IS_SMIA);
@@ -3228,13 +3229,19 @@ static int ccs_firmware_name(struct i2c_client *client,
 
 		if (sensor->minfo.module_ident_canonical)
 			return snprintf(filename, filename_size,
-					"ccs/canonical/module-%s.fw",
-					sensor->minfo.module_ident_canonical);
+					"ccs/canonical/module-%s%s%0.*x.fw",
+					sensor->minfo.module_ident_canonical,
+					use_version ? "-" : "",
+					use_version ? 4 : 0,
+					use_version ? revision_number : 0);
 
 		if (sensor->minfo.module_ident_non_canonical)
 			return snprintf(filename, filename_size,
-					"ccs/non-canonical/module-%u.fw",
-					sensor->minfo.module_ident_non_canonical);
+					"ccs/non-canonical/module-%u%s%0.*x.fw",
+					sensor->minfo.module_ident_non_canonical,
+					use_version ? "-" : "",
+					use_version ? 4 : 0,
+					use_version ? revision_number : 0);
 	} else {
 		manufacturer_id = is_ccs ?
 			sensor->minfo.sensor_mipi_manufacturer_id :
@@ -3256,8 +3263,10 @@ static int ccs_firmware_name(struct i2c_client *client,
 		    strstr(compatible, "mipi-ccs") != compatible &&
 		    strstr(compatible, "nokia,smia") != compatible)
 			return snprintf(filename, filename_size,
-					"ccs/compatible/sensor-%s.fw",
-					compatible);
+					"ccs/compatible/sensor-%s%s%0.*x.fw",
+					compatible, use_version ? "-" : "",
+					use_version ? is_ccs ? 4 : 2 : 0,
+					use_version ? revision_number : 0);
 	}
 
 	return snprintf(filename, filename_size,
@@ -3275,13 +3284,16 @@ ccs_request_firmware(struct i2c_client *client, struct ccs_sensor *sensor,
 		     char *filename, size_t filename_size, bool is_module)
 {
 	int rval;
+	bool use_version = false;
 
-	rval = ccs_firmware_name(client, sensor, filename, sizeof(filename),
-				 is_module);
-	if (rval >= sizeof(filename))
-		return -ENOMEM;
+	do {
+		rval = ccs_firmware_name(client, sensor, filename, sizeof(filename),
+					 is_module, use_version);
+		if (rval >= sizeof(filename))
+			return -ENOMEM;
 
-	rval = request_firmware(fw, filename, &client->dev);
+		rval = request_firmware(fw, filename, &client->dev);
+	} while (rval && ++use_version);
 	if (rval)
 		return rval;
 
