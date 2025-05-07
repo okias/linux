@@ -3196,6 +3196,30 @@ static int ccs_firmware_name(struct i2c_client *client,
 			!is_ccs && !is_module ? 2 : 4, revision_number);
 }
 
+static int
+ccs_request_firmware(struct i2c_client *client, struct ccs_sensor *sensor,
+		     struct ccs_data_container *data, const struct firmware **fw,
+		     char *filename, size_t filename_size, bool is_module)
+{
+	int rval;
+
+	rval = ccs_firmware_name(client, sensor, filename, sizeof(filename),
+				 is_module);
+	if (rval >= sizeof(filename))
+		return -ENOMEM;
+
+	rval = request_firmware(fw, filename, &client->dev);
+	if (rval)
+		return rval;
+
+	rval = ccs_data_parse(&sensor->sdata, (*fw)->data, (*fw)->size,
+			      &client->dev, true);
+	release_firmware(*fw);
+	*fw = NULL;
+
+	return rval;
+}
+
 static int ccs_probe(struct i2c_client *client)
 {
 	static struct lock_class_key pixel_array_lock_key, binner_lock_key,
@@ -3316,38 +3340,20 @@ static int ccs_probe(struct i2c_client *client)
 		goto out_power_off;
 	}
 
-	rval = ccs_firmware_name(client, sensor, filename, sizeof(filename),
-				 false);
-	if (rval >= sizeof(filename)) {
+	rval = ccs_request_firmware(client, sensor, &sensor->sdata, &fw,
+				    filename, sizeof(filename), false);
+	if (rval) {
 		rval = -ENOMEM;
 		goto out_power_off;
 	}
 
-	rval = request_firmware(&fw, filename, &client->dev);
-	if (!rval) {
-		rval = ccs_data_parse(&sensor->sdata, fw->data, fw->size,
-				      &client->dev, true);
-		release_firmware(fw);
-		if (rval)
-			goto out_power_off;
-	}
-
 	if (!(ccsdev->flags & CCS_DEVICE_FLAG_IS_SMIA) ||
 	    sensor->minfo.smiapp_version) {
-		rval = ccs_firmware_name(client, sensor, filename,
-					 sizeof(filename), true);
-		if (rval >= sizeof(filename)) {
+		rval = ccs_request_firmware(client, sensor, &sensor->mdata, &fw,
+					    filename, sizeof(filename), false);
+		if (rval) {
 			rval = -ENOMEM;
 			goto out_release_sdata;
-		}
-
-		rval = request_firmware(&fw, filename, &client->dev);
-		if (!rval) {
-			rval = ccs_data_parse(&sensor->mdata, fw->data,
-					      fw->size, &client->dev, true);
-			release_firmware(fw);
-			if (rval)
-				goto out_release_sdata;
 		}
 	}
 
