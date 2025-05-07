@@ -16,6 +16,28 @@ Also see :ref:`the CCS driver UAPI documentation <media-ccs-uapi>`.
 CCS static data
 ---------------
 
+Sensor identification
+---------------------
+
+Normally CCS sensor and module identification information can be all obtained
+from the sensor's identification registers. In case these registers aren't
+programmed to the hardware, CCS compliant sensors may also be identified based
+on identification information in DT firmware. In this case the information from
+DT will override the sensor and module identification information present in the
+sensor's registers. The the following properties are used for the purpose:
+
+- ``mipi,sensor-vendor-id``
+- ``mipi,sensor-device-id``
+- ``mipi,sensor-revision``
+- ``mipi,module-vendor-id``
+- ``mipi,module-device-id``
+- ``mipi,module-revision``
+
+Please refer to mipi-ccs DT bindings for more information.
+
+Loading CCS static data based on identification registers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The MIPI CCS driver supports CCS static data for all compliant devices,
 including not just those compliant with CCS 1.1 but also CCS 1.0 and SMIA(++).
 For CCS the file names are formed as
@@ -33,7 +55,31 @@ For SMIA (non-++) compliant devices the static data file name is
 	``ccs/smia-sensor-vv-mmmm-rr.fw`` (sensor).
 
 ``vvvv`` or ``vv`` denotes MIPI and SMIA manufacturer IDs respectively, ``mmmm``
-model ID and ``rrrr`` or ``rr`` revision number.
+model ID and ``rrrr`` or ``rr`` revision number. These are always two or four
+characters long, depending on the string denoting them above.
+
+Loading CCS static data without identification information
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+CCS static data may be loaded based on the sensor's compatible string (sensor)
+and the module identification information documented in the mipi-ccs DT
+bindings. The file names in these cases are, respectively
+
+	``ccs/compatible/sensor-S{,-revision}.fw`` (sensor),
+	``ccs/canonical/module-M{,-revision}.fw`` (module) and
+	``ccs/non-canonical/module-nnnn[,-revision}.fw`` (module).
+
+Above, ``S`` is the sensor's DT compatible string that differs from the CCS or
+SMIA compatible strings for standard-compliant devices. ``M`` is the canonical
+module identification string and four characters long ``nnnn`` is the module
+identifier for non-canonically named modules. See
+Documentation/devicetree/bindings/media/camera-module.yaml for module
+identification.
+
+If the revision of the device is non-zero, then the revision number is appended
+to the file name before the dot, in lower case hexadecimal form (without 0x
+prefix). Should no file with the revision exist, a name without the revision is
+loaded as a fallback.
 
 CCS tools
 ~~~~~~~~~
@@ -79,4 +125,4 @@ The PLL model implemented by the PLL calculator corresponds to MIPI CCS 1.1.
 
 .. kernel-doc:: drivers/media/i2c/ccs-pll.h
 
-**Copyright** |copy| 2020 Intel Corporation
+**Copyright** |copy| 2020, 2025 Intel Corporation
