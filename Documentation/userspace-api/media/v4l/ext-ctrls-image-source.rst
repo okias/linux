@@ -150,3 +150,9 @@ Image Source Control IDs
     reversed readout. ``V4L2_CFA_PATTERN_FLIP_BOTH`` for setting both
     ``V4L2_CFA_PATTERN_FLIP_HORIZONTAL`` and ``V4L2_CFA_PATTERN_FLIP_VERTICAL``
     is provided as well.
+
+``V4L2_CID_METADATA_LAYOUT (integer)``
+    The metadata layout control defines the metadata layout on the device's data
+    interface for metadata streams. The control is used in conjunction with
+    :ref:`generic metadata formats <media-bus-format-generic-meta>` formats to
+    specify the layout of the data.
