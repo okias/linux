@@ -23,7 +23,6 @@
 /delete-node/ &rmtfs_mem;
 /delete-node/ &spss_mem;
 /delete-node/ &adsp_mem;
-/delete-node/ &slpi_mem;
 
 / {
 	chassis-type = "handset";
@@ -110,11 +109,6 @@
 		 */
 		removed_region: removed-region@88f00000 {
 			reg = <0 0x88f00000 0 0x1c00000>;
-			no-map;
-		};
-
-		slpi_mem: slpi@96700000 {
-			reg = <0 0x96700000 0 0xf00000>;
 			no-map;
 		};
 
@@ -974,10 +968,12 @@
 
 &slpi_pas {
 	firmware-name = "qcom/sdm845/starqltechn/slpi.mbn";
-	status = "okay";
 
-//	vdd-cx-supply = <&vdd-l1-l27-supply>;
-//	vdd-cx-supply = <&vdd-l4-l5-supply>;
+	pinctrl-0 = <&slpi_ldo_active_state>;
+	pinctrl-1 = <&slpi_ldo_sleep_state>;
+	pinctrl-names = "default", "sleep";
+
+	status = "okay";
 };
 
 &usb_1 {
@@ -1104,6 +1100,22 @@
 		pins = "gpio126";
 		function = "gpio";
 		bias-pull-up;
+	};
+
+	slpi_ldo_active_state: slpi-ldo-active-state {
+		pins = "gpio8";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+		output-high;
+	};
+
+	slpi_ldo_sleep_state: slpi-ldo-sleep-state {
+		pins = "gpio8";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-disable;
+		output-low;
 	};
 
 	i2c18_sda_state: i2c18-sda-state {
