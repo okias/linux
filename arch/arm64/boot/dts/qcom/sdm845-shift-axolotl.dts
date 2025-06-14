@@ -650,6 +650,12 @@
 	};
 };
 
+&q6voicedai {
+	dai@1 {
+		reg = <VOICEMMODE1>;
+	};
+};
+
 &qup_uart9_rx {
 	drive-strength = <2>;
 	bias-pull-up;
