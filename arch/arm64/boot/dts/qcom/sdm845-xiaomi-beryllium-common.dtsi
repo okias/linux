@@ -487,6 +487,12 @@
 	};
 };
 
+&q6voicedai {
+	dai@1 {
+		reg = <VOICEMMODE1>;
+	};
+};
+
 &q6cvp {
 	status = "okay";
 };
