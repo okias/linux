@@ -871,3 +871,9 @@
 &q6mvm {
 	status = "okay";
 };
+
+&q6voicedai {
+	dai@1 {
+		reg = <VOICEMMODE1>;
+	};
+};
