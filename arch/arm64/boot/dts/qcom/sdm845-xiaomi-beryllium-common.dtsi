@@ -490,6 +490,12 @@
 	};
 };
 
+&q6voicedai {
+	dai@1 {
+		reg = <VOICEMMODE1>;
+	};
+};
+
 &pmi8998_haptics {
 	status = "okay";
 	qcom,wave-play-rate-us = <4878>;
