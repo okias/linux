@@ -285,6 +285,12 @@ static const u32 imx219_mbus_formats[] = {
 	MEDIA_BUS_FMT_SBGGR8_1X8,
 };
 
+static const u32 imx219_mbus_formats_raw[] = {
+	IMX219_NATIVE_FORMAT,
+	MEDIA_BUS_FMT_RAW_10,
+	MEDIA_BUS_FMT_RAW_8,
+};
+
 /*
  * Initialisation delay between XCLR low->high and the moment when the sensor
  * can start capture (i.e. can leave software stanby) must be not less than:
@@ -386,6 +392,10 @@ static inline struct imx219 *to_imx219(struct v4l2_subdev *_sd)
 static u32 imx219_get_format_code(struct imx219 *imx219, u32 code)
 {
 	unsigned int i;
+
+	if (code == MEDIA_BUS_FMT_RAW_10 ||
+	    code == MEDIA_BUS_FMT_RAW_8)
+		return code;
 
 	for (i = 0; i < ARRAY_SIZE(imx219_mbus_formats); i++)
 		if (imx219_mbus_formats[i] == code)
@@ -645,6 +655,20 @@ static int imx219_init_controls(struct imx219 *imx219)
 		/* The "Solid color" pattern is white by default */
 	}
 
+	v4l2_ctrl_new_std(ctrl_hdlr, NULL, V4L2_CID_CFA_PATTERN,
+			  V4L2_CFA_PATTERN_RGGB, V4L2_CFA_PATTERN_RGGB,
+			  1, V4L2_CFA_PATTERN_RGGB);
+	v4l2_ctrl_new_std(ctrl_hdlr, NULL,
+			  V4L2_CID_CFA_PATTERN_FLIP,
+			  0, V4L2_CFA_PATTERN_FLIP_BOTH,
+			  0, V4L2_CFA_PATTERN_FLIP_BOTH);
+	v4l2_ctrl_new_std(ctrl_hdlr, NULL, V4L2_CID_METADATA_LAYOUT,
+			  0, V4L2_METADATA_LAYOUT_CCS,
+			  1, V4L2_METADATA_LAYOUT_CCS);
+	v4l2_ctrl_new_std(ctrl_hdlr, NULL, V4L2_CID_CONFIG_MODEL,
+			  0, V4L2_CONFIG_MODEL_COMMON_RAW_SENSOR,
+			  0, V4L2_CONFIG_MODEL_COMMON_RAW_SENSOR);
+
 	if (ctrl_hdlr->error) {
 		ret = ctrl_hdlr->error;
 		dev_err_probe(&client->dev, ret, "Control init failed\n");
@@ -863,13 +887,19 @@ static int imx219_enum_mbus_code(struct v4l2_subdev *sd,
 	struct imx219 *imx219 = to_imx219(sd);
 
 	switch (code->pad) {
-	case IMX219_PAD_IMAGE:
+	case IMX219_PAD_IMAGE: {
+		const u32 img_codes[] = {
+			IMX219_NATIVE_FORMAT,
+			MEDIA_BUS_FMT_RAW_10,
+		};
+
 		/* The internal image pad is hardwired to the native format. */
-		if (code->index > 0)
+		if (code->index > ARRAY_SIZE(img_codes))
 			return -EINVAL;
 
-		code->code = IMX219_NATIVE_FORMAT;
+		code->code = img_codes[code->index];
 		return 0;
+	}
 
 	case IMX219_PAD_EDATA:
 		if (code->index > 0)
@@ -891,10 +921,15 @@ static int imx219_enum_mbus_code(struct v4l2_subdev *sd,
 	if (code->stream == IMX219_STREAM_IMAGE) {
 		u32 format;
 
-		if (code->index >= ARRAY_SIZE(imx219_mbus_formats) / 4)
-			return -EINVAL;
+		if (code->index >= ARRAY_SIZE(imx219_mbus_formats) / 4) {
+			u32 idx = code->index - ARRAY_SIZE(imx219_mbus_formats);
+			if (idx >= ARRAY_SIZE(imx219_mbus_formats_raw))
+				return -EINVAL;
 
-		format = imx219_mbus_formats[code->index * 4];
+			format = imx219_mbus_formats_raw[idx];
+		} else {
+			format = imx219_mbus_formats[code->index * 4];
+		}
 		code->code = imx219_get_format_code(imx219, format);
 	} else {
 		struct v4l2_mbus_framefmt *fmt;
