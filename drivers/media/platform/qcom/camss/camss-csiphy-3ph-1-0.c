@@ -880,7 +880,6 @@ static int csiphy_init(struct csiphy_device *csiphy)
 {
 	struct device *dev = csiphy->camss->dev;
 	struct csiphy_device_regs *regs;
-	struct csiphy_lanes_cfg *c = &csiphy->cfg.csi2->lane_cfg;
 
 	regs = devm_kmalloc(dev, sizeof(*regs), GFP_KERNEL);
 	if (!regs)
@@ -891,13 +890,9 @@ static int csiphy_init(struct csiphy_device *csiphy)
 
 	switch (csiphy->camss->res->version) {
 	case CAMSS_845:
-		if (c->cphy) {
-			regs->lane_regs = &lane_regs_sdm845_3ph[0];
-			regs->lane_array_size = ARRAY_SIZE(lane_regs_sdm845_3ph);
-		} else {
-			regs->lane_regs = &lane_regs_sdm845[0];
-			regs->lane_array_size = ARRAY_SIZE(lane_regs_sdm845);
-		}
+		regs->lane_regs = &lane_regs_sdm845[0];
+		regs->lane_array_size = ARRAY_SIZE(lane_regs_sdm845);
+		break;
 	case CAMSS_7280:
 	case CAMSS_8250:
 		regs->lane_regs = &lane_regs_sm8250[0];
