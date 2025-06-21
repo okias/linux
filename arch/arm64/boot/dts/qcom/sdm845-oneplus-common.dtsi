@@ -948,10 +948,6 @@
 	};
 };
 
-&q6core {
-	qcom,acdb-name = "qcom/sdm845/oneplus6/acdb/MTP/MTP_Global_cal.acdb";
-};
-
 &qupv3_id_1 {
 	status = "okay";
 };
