@@ -431,6 +431,10 @@ snd-soc-tas2780-y := tas2780.o
 # Mux
 snd-soc-simple-mux-y := simple-mux.o
 
+snd-soc-tas2557-objs := tas2557.o
+ccflags-y += -DDEBUG
+obj-$(CONFIG_SND_SOC_TAS2557)	+= snd-soc-tas2557.o
+
 snd-soc-tas2559-objs := tas2559.o
 ccflags-y += -DDEBUG
 obj-$(CONFIG_SND_SOC_TAS2559) += snd-soc-tas2559.o
