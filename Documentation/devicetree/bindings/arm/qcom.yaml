@@ -926,6 +926,7 @@ properties:
               - thundercomm,db845c
               - xiaomi,beryllium
               - xiaomi,beryllium-ebbg
+              - xiaomi,perseus
               - xiaomi,polaris
           - const: qcom,sdm845
 
