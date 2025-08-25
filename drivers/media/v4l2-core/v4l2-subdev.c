@@ -636,8 +636,11 @@ static void subdev_copy_fix_routes(struct v4l2_subdev_routing *routing,
 	struct v4l2_subdev_route *routes =
 		(struct v4l2_subdev_route *)(uintptr_t)routing->routes;
 
-	for (u32 i = 0; i < copy_routes; i++)
+	for (u32 i = 0; i < copy_routes; i++) {
 		routes[i] = src[i];
+		if (routes[i].flags & V4L2_SUBDEV_ROUTE_FL_IMMUTABLE)
+			routes[i].flags |= V4L2_SUBDEV_ROUTE_FL_STATIC;
+	}
 
 	routing->num_routes = num_routes;
 }
