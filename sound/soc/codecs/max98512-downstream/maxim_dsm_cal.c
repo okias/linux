@@ -23,6 +23,7 @@
 #include <linux/power_supply.h>
 #include "maxim_dsm.h"
 #include "maxim_dsm_cal.h"
+#include "maxim_dsm_power.h"
 
 #define DEBUG_MAXIM_DSM_CAL
 #ifdef DEBUG_MAXIM_DSM_CAL
@@ -1030,7 +1031,7 @@ static struct attribute_group maxdsm_cal_attr_grp = {
 	.attrs = maxdsm_cal_attr,
 };
 
-static int __init maxdsm_cal_init(void)
+int maxdsm_cal_init(void)
 {
 	struct maxim_dsm_cal *mdc;
 	int ret = 0;
@@ -1080,17 +1081,21 @@ static int __init maxdsm_cal_init(void)
 
 	dbg_maxdsm("Completed initialization");
 
+	ret = maxdsm_power_init();
+	if (ret) {
+		pr_err("Failed to initialize maxdsm_power\n");
+		// Optionally handle error, e.g., goto error;
+	}
+
 	return ret;
 }
-module_init(maxdsm_cal_init);
 
-static void __exit maxdsm_cal_exit(void)
+void maxdsm_cal_exit(void)
 {
+	maxdsm_power_exit();
 	kfree(g_mdc);
 }
-module_exit(maxdsm_cal_exit);
 
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_AUTHOR(DRIVER_AUTHOR);
-//MODULE_SUPPORTED_DEVICE(DRIVER_SUPPORTED);
 MODULE_LICENSE("GPL");

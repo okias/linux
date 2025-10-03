@@ -627,7 +627,7 @@ static struct attribute_group maxdsm_power_attr_grp = {
 	.attrs = maxdsm_power_attr,
 };
 
-static int __init maxdsm_power_init(void)
+int maxdsm_power_init(void)
 {
 	struct class *class = NULL;
 	struct maxim_dsm_power *mdp;
@@ -689,13 +689,11 @@ static int __init maxdsm_power_init(void)
 
 	return ret;
 }
-module_init(maxdsm_power_init);
 
-static void __exit maxdsm_power_exit(void)
+void maxdsm_power_exit(void)
 {
 	kfree(g_mdp);
 };
-module_exit(maxdsm_power_exit);
 
 MODULE_DESCRIPTION("For power measurement of DSM");
 MODULE_AUTHOR("Kyounghun Jeon<hun.jeon@maximintegrated.com");
