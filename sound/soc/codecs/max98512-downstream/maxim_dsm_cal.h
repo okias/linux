@@ -93,7 +93,5 @@ extern int maxdsm_cal_get_safe_mode(void);
 extern uint32_t maxdsm_cal_get_thermal_min_gain(void);
 extern void maxdsm_cal_set_thermal_min_gain(uint32_t thermal_min_gain);
 extern int maxdsm_cal_get_temp_from_power_supply(void);
-extern int maxdsm_cal_init(void);
-extern void maxdsm_cal_exit(void);
 
 #endif /* __SOUND_MAXIM_DSM_CAL_H__ */

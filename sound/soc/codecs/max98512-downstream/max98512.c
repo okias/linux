@@ -24,7 +24,6 @@
 #include <sound/tlv.h>
 #include "max98512.h"
 #include "maxim_dsm.h"
-#include "maxim_dsm_cal.h"
 #ifdef CONFIG_SND_SOC_MAXIM_DSM
 #include "maxim_dsm_cal.h"
 #endif /* CONFIG_SND_SOC_MAXIM_DSM_CAL */
@@ -2567,23 +2566,7 @@ static struct i2c_driver max98512_i2c_driver = {
 	.remove = max98512_i2c_remove,
 	.id_table = max98512_i2c_id,
 };
-
-static int __init max98512_init(void)
-{
-    int ret = maxdsm_cal_init();
-    if (ret)
-        return ret;
-    return i2c_add_driver(&max98512_i2c_driver);
-}
-
-static void __exit max98512_exit(void)
-{
-    i2c_del_driver(&max98512_i2c_driver);
-    maxdsm_cal_exit();
-}
-
-module_init(max98512_init);
-module_exit(max98512_exit);
+module_i2c_driver(max98512_i2c_driver)
 
 MODULE_DESCRIPTION("ALSA SoC MAX98512 driver");
 MODULE_AUTHOR("Ryan Lee <ryans.lee@maximintegrated.com>");
