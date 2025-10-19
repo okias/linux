@@ -18,11 +18,17 @@
 #include <drm/drm_panel.h>
 #include <drm/drm_probe_helper.h>
 
+struct sofef00_desc {
+	const struct drm_display_mode *mode;
+};
+
 struct sofef00_panel {
 	struct drm_panel panel;
 	struct mipi_dsi_device *dsi;
 	struct regulator_bulk_data *supplies;
 	struct gpio_desc *reset_gpio;
+
+	const struct sofef00_desc *panel_desc;
 };
 
 static const struct regulator_bulk_data sofef00_supplies[] = {
@@ -47,9 +53,9 @@ static void sofef00_panel_reset(struct sofef00_panel *ctx)
 	gpiod_set_value_cansleep(ctx->reset_gpio, 0);
 	usleep_range(5000, 6000);
 	gpiod_set_value_cansleep(ctx->reset_gpio, 1);
-	usleep_range(2000, 3000);
+	usleep_range(2000, 3000); // 1000-2000 is enough?
 	gpiod_set_value_cansleep(ctx->reset_gpio, 0);
-	usleep_range(12000, 13000);
+	usleep_range(12000, 13000); // 10-11000 is enough?
 }
 
 static int sofef00_panel_on(struct sofef00_panel *ctx)
@@ -66,13 +72,18 @@ static int sofef00_panel_on(struct sofef00_panel *ctx)
 	mipi_dsi_dcs_set_tear_on_multi(&dsi_ctx, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
 	sofef00_test_key_off_lvl2(&dsi_ctx);
 
+	// mipi_dsi_dcs_set_page_address_multi(&dsi_ctx, 0x0000, 0x086f);
+
+	// block nope
 	sofef00_test_key_on_lvl2(&dsi_ctx);
 	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x07);
 	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb6, 0x12);
 	sofef00_test_key_off_lvl2(&dsi_ctx);
+	// block nope end
 
 	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x20);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_WRITE_POWER_SAVE, 0x00);
+	//mipi_dsi_msleep(&dsi_ctx, 110);
+	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_WRITE_POWER_SAVE, 0x00); //nope
 
 	return dsi_ctx.accum_err;
 }
@@ -96,7 +107,7 @@ static int sofef00_panel_off(struct sofef00_panel *ctx)
 	mipi_dsi_msleep(&dsi_ctx, 40);
 
 	mipi_dsi_dcs_enter_sleep_mode_multi(&dsi_ctx);
-	mipi_dsi_msleep(&dsi_ctx, 160);
+	mipi_dsi_msleep(&dsi_ctx, 160); // only 120?
 
 	return dsi_ctx.accum_err;
 }
@@ -140,6 +151,25 @@ static int sofef00_panel_unprepare(struct drm_panel *panel)
 	return 0;
 }
 
+static const struct drm_display_mode ams601nt22_panel_mode = {
+	.clock = (1080 + 32 + 32 + 98) * (2160 + 32 + 4 + 98) * 60 / 1000,
+
+	.hdisplay = 1080,
+	.hsync_start = 1080 + 32,
+	.hsync_end = 1080 + 32 + 32,
+	.htotal = 1080 + 32 + 32 + 98,
+
+	.vdisplay = 2160,
+	.vsync_start = 2160 + 32,
+	.vsync_end = 2160 + 32 + 4,
+	.vtotal = 2160 + 32 + 4 + 98,
+
+	.width_mm = 69,
+	.height_mm = 137,
+
+	.type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED,
+};
+
 static const struct drm_display_mode ams628nw01_panel_mode = {
 	.clock = (1080 + 112 + 16 + 36) * (2280 + 36 + 8 + 12) * 60 / 1000,
 
@@ -159,9 +189,19 @@ static const struct drm_display_mode ams628nw01_panel_mode = {
 	.type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED,
 };
 
+static const struct sofef00_desc ams601nt22_data = {
+	.mode = &ams601nt22_panel_mode,
+};
+
+static const struct sofef00_desc ams628nw01_data = {
+	.mode = &ams628nw01_panel_mode,
+};
+
 static int sofef00_panel_get_modes(struct drm_panel *panel, struct drm_connector *connector)
 {
-	return drm_connector_helper_get_modes_fixed(connector, &ams628nw01_panel_mode);
+	struct sofef00_panel *ctx = to_sofef00_panel(panel);
+
+	return drm_connector_helper_get_modes_fixed(connector, ctx->panel_desc->mode);
 }
 
 static const struct drm_panel_funcs sofef00_panel_panel_funcs = {
@@ -232,6 +272,7 @@ static int sofef00_panel_probe(struct mipi_dsi_device *dsi)
 				     "Failed to get reset-gpios\n");
 
 	ctx->dsi = dsi;
+	ctx->panel_desc = of_device_get_match_data(dev);
 	mipi_dsi_set_drvdata(dsi, ctx);
 
 	dsi->lanes = 4;
@@ -272,8 +313,9 @@ static void sofef00_panel_remove(struct mipi_dsi_device *dsi)
 
 static const struct of_device_id sofef00_panel_of_match[] = {
 	/* legacy compatible */
-	{ .compatible = "samsung,sofef00" },
-	{ .compatible = "samsung,sofef00-ams628nw01" },
+	{ .compatible = "samsung,sofef00", .data = &ams628nw01_data },
+	{ .compatible = "samsung,sofef00-ams601nt22", .data = &ams601nt22_data },
+	{ .compatible = "samsung,sofef00-ams628nw01", .data = &ams628nw01_data },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, sofef00_panel_of_match);
@@ -290,5 +332,6 @@ static struct mipi_dsi_driver sofef00_panel_driver = {
 module_mipi_dsi_driver(sofef00_panel_driver);
 
 MODULE_AUTHOR("Casey Connolly <casey.connolly@linaro.org>");
+MODULE_AUTHOR("David Heidelberg <david@ixit.cz>");
 MODULE_DESCRIPTION("DRM driver for Samsung SOFEF00 DDIC");
 MODULE_LICENSE("GPL v2");
