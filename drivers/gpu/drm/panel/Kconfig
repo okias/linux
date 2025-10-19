@@ -890,6 +890,7 @@ config DRM_PANEL_SAMSUNG_SOFEF00
 	  panel SOFEF00 DDIC and connected panel.
 	  Currently supported panels:
 
+	    Samsung AMS601NT22 (found in Pixel 3a XL, 1080x2160@60Hz)
 	    Samsung AMS628NW01 (found in OnePlus 6, 1080x2280@60Hz)
 
 config DRM_PANEL_SEIKO_43WVF1G
