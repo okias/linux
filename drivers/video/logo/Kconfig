@@ -30,6 +30,12 @@ config LOGO_LINUX_CLUT224
 	bool "Standard 224-color Linux logo"
 	default y
 
+config LOGO_LINUX_PHONE_CLUT224
+	bool "Phone 224-color Linux logo"
+	default n
+	help
+	  Suitable for Linux phone and tablets.
+
 config LOGO_DEC_CLUT224
 	bool "224-color Digital Equipment Corporation Linux logo"
 	depends on MACH_DECSTATION || ALPHA
