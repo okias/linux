@@ -45,96 +45,126 @@ static void samsung_s6e3fc2x01_reset(struct samsung_s6e3fc2x01 *ctx)
 
 static int samsung_s6e3fc2x01_on(struct samsung_s6e3fc2x01 *ctx)
 {
-	struct mipi_dsi_multi_context dsi_ctx = { .dsi = ctx->dsi };
+	struct mipi_dsi_device *dsi = ctx->dsi;
+	struct device *dev = &dsi->dev;
+	int ret;
 
-	ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9f, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0x9f, 0xa5, 0xa5);
 
-	mipi_dsi_dcs_exit_sleep_mode_multi(&dsi_ctx);
-
+	ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
+	if (ret < 0) {
+		dev_err(dev, "Failed to exit sleep mode: %d\n", ret);
+		return ret;
+	}
 	usleep_range(10000, 11000);
 
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9f, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x01);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xcd, 0x01);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0x9f, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x01);
+	mipi_dsi_dcs_write_seq(dsi, 0xcd, 0x01);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
 	usleep_range(15000, 16000);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9f, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0x9f, 0xa5, 0xa5);
 
-	mipi_dsi_dcs_set_tear_on_multi(&dsi_ctx, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
+	ret = mipi_dsi_dcs_set_tear_on(dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
+	if (ret < 0) {
+		dev_err(dev, "Failed to set tear on: %d\n", ret);
+		return ret;
+	}
 
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9f, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xeb, 0x17, 0x41, 0x92, 0x0e, 0x10, 0x82, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0x9f, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xeb, 0x17, 0x41, 0x92, 0x0e, 0x10, 0x82, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
 
-	mipi_dsi_dcs_set_column_address_multi(&dsi_ctx, 0x0000, 0x0437);
-	mipi_dsi_dcs_set_page_address_multi(&dsi_ctx, 0x0000, 0x0923);
+	ret = mipi_dsi_dcs_set_column_address(dsi, 0x0000, 0x0437);
+	if (ret < 0) {
+		dev_err(dev, "Failed to set column address: %d\n", ret);
+		return ret;
+	}
 
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x09);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xe8, 0x10, 0x30);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x07);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb7, 0x01);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x08);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb7, 0x12);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xfc, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x01);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xe3, 0x88);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x07);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xed, 0x67);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xfc, 0xa5, 0xa5);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x20);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, MIPI_DCS_WRITE_POWER_SAVE, 0x00);
+	ret = mipi_dsi_dcs_set_page_address(dsi, 0x0000, 0x0923);
+	if (ret < 0) {
+		dev_err(dev, "Failed to set page address: %d\n", ret);
+		return ret;
+	}
+
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x09);
+	mipi_dsi_dcs_write_seq(dsi, 0xe8, 0x10, 0x30);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x07);
+	mipi_dsi_dcs_write_seq(dsi, 0xb7, 0x01);
+	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x08);
+	mipi_dsi_dcs_write_seq(dsi, 0xb7, 0x12);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0xfc, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x01);
+	mipi_dsi_dcs_write_seq(dsi, 0xe3, 0x88);
+	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x07);
+	mipi_dsi_dcs_write_seq(dsi, 0xed, 0x67);
+	mipi_dsi_dcs_write_seq(dsi, 0xfc, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x20);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, MIPI_DCS_WRITE_POWER_SAVE, 0x00);
 	usleep_range(1000, 2000);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb3, 0x00, 0xc1);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xb3, 0x00, 0xc1);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
 
-	mipi_dsi_dcs_set_display_on_multi(&dsi_ctx);
+	ret = mipi_dsi_dcs_set_display_on(dsi);
+	if (ret < 0) {
+		dev_err(dev, "Failed to set display on: %d\n", ret);
+		return ret;
+	}
 
 	usleep_range(10000, 11000);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9f, 0xa5, 0xa5);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x29);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9f, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0x9f, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0x29);
+	mipi_dsi_dcs_write_seq(dsi, 0x9f, 0x5a, 0x5a);
 
 	return 0;
 }
 
 static int samsung_s6e3fc2x01_off(struct samsung_s6e3fc2x01 *ctx)
 {
-	struct mipi_dsi_multi_context dsi_ctx = { .dsi = ctx->dsi };
+	struct mipi_dsi_device *dsi = ctx->dsi;
+	int ret;
 
-	ctx->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
+	dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
 
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9f, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0x9f, 0xa5, 0xa5);
 
-	mipi_dsi_dcs_set_display_off_multi(&dsi_ctx);
-
+	ret = mipi_dsi_dcs_set_display_off(dsi);
+	if (ret < 0) {
+		dev_err(&dsi->dev, "Failed to set display off: %d\n", ret);
+		return ret;
+	}
 	usleep_range(10000, 11000);
 
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
 	usleep_range(16000, 17000);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x50);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb9, 0x82);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x50);
+	mipi_dsi_dcs_write_seq(dsi, 0xb9, 0x82);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
 	usleep_range(16000, 17000);
 	msleep(40);
 
-	mipi_dsi_dcs_enter_sleep_mode_multi(&dsi_ctx);
+	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
+	if (ret < 0) {
+		dev_err(&dsi->dev, "Failed to enter sleep mode: %d\n", ret);
+		return ret;
+	}
 
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0x9f, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0x5a, 0x5a);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xb0, 0x05);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf4, 0x01);
-	mipi_dsi_dcs_write_seq_multi(&dsi_ctx, 0xf0, 0xa5, 0xa5);
+	mipi_dsi_dcs_write_seq(dsi, 0x9f, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0x5a, 0x5a);
+	mipi_dsi_dcs_write_seq(dsi, 0xb0, 0x05);
+	mipi_dsi_dcs_write_seq(dsi, 0xf4, 0x01);
+	mipi_dsi_dcs_write_seq(dsi, 0xf0, 0xa5, 0xa5);
 	msleep(160);
 
 	return 0;
