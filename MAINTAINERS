@@ -7929,11 +7929,6 @@ S:	Maintained
 F:	Documentation/devicetree/bindings/display/sharp,ls010b7dh04.yaml
 F:	drivers/gpu/drm/tiny/sharp-memory.c
 
-DRM DRIVER FOR SAMSUNG S6E3FC2X01 PANELS
-M:	Nia Espera <a5b6@riseup.net>
-S:	Maintained
-F:	drivers/gpu/drm/panel/panel-samsung-s6e3fc2x01.c
-
 DRM DRIVER FOR SITRONIX ST7586 PANELS
 M:	David Lechner <david@lechnology.com>
 S:	Maintained
