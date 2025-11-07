@@ -600,7 +600,7 @@
 		vio-supply = <&cam_vio_1p8>;
 
 		orientation = <1>; /* Rear camera */
-		rotation = <90>;
+		rotation = <270>;
 
 		status = "okay";
 
