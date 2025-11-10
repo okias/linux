@@ -936,7 +936,7 @@
 				#size-cells = <0>;
 				qcom,intents = <512 20>;
 
-				service@3 {
+				q6core: service@3 {
 					reg = <APR_SVC_ADSP_CORE>;
 					compatible = "qcom,q6core";
 					qcom,protection-domain = "avs/audio", "msm/adsp/audio_pd";
