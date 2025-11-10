@@ -524,6 +524,12 @@
 	status = "okay";
 };
 
+&pmi8998_fg {
+	status = "okay";
+	monitored-battery = <&battery>;
+	power-supplies = <&pmi8998_charger>;
+};
+
 &pmi8998_haptics {
 	qcom,wave-play-rate-us = <4255>;
 
