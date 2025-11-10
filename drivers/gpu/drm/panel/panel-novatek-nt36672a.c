@@ -616,6 +616,8 @@ static int nt36672a_panel_add(struct nt36672a_panel *pinfo)
 		return dev_err_probe(dev, PTR_ERR(pinfo->reset_gpio),
 				     "failed to get reset gpio from DT\n");
 
+	pinfo->base.prepare_prev_first = true;
+
 	ret = drm_panel_of_backlight(&pinfo->base);
 	if (ret)
 		return dev_err_probe(dev, ret, "Failed to get backlight\n");
