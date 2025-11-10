@@ -247,6 +247,20 @@
 		regulator-boot-on;
 	};
 
+	main_cam_vaf: main-cam-vaf-supply {
+		compatible = "regulator-fixed";
+		regulator-name = "main_cam_vaf";
+
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+		regulator-enable-ramp-delay = <100>;
+
+		gpio = <&tlmm 31 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+
+		vin-supply = <&vreg_bob>;
+	};
+
 	main_cam_vdig: main-cam-vdig-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "main_cam_vdig";
@@ -586,6 +600,12 @@
 };
 
 &cci_i2c0 {
+	rear_cam_actuator: actuator@72 {
+		compatible = "onnn,lc898217xc";
+		reg = <0x72>;
+		vcc-supply = <&main_cam_vaf>;
+	};
+
 	rear_cam: camera@1a {
 		compatible = "sony,imx519";
 		reg = <0x1a>;
@@ -609,6 +629,8 @@
 
 		orientation = <1>; /* Rear camera */
 		rotation = <270>;
+
+		lens-focus = <&rear_cam_actuator>;
 
 		status = "okay";
 
