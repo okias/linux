@@ -985,6 +985,8 @@
 
 					q6voicedai: dais {
 						compatible = "qcom,q6voice-dais";
+						#address-cells = <1>;
+						#size-cells = <0>;
 						#sound-dai-cells = <1>;
 					};
 				};
