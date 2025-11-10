@@ -645,6 +645,8 @@
 		orientation = <1>; /* Rear camera */
 		rotation = <270>;
 
+		lens-focus = <&rear_cam_actuator>;
+
 		status = "okay";
 
 		port {
@@ -656,7 +658,12 @@
 		};
 	};
 
-	/* rear onnn,lc898217xc @72 */
+	rear_cam_actuator: actuator@72 {
+		compatible = "onnn,lc898217xc";
+		reg = <0x72>;
+		vana-supply = <&main_cam_vaf>;
+		vdd-supply = <&cam_vio_1p8>;
+	};
 };
 
 &cci_i2c1 {
@@ -684,6 +691,8 @@
 		orientation = <1>; /* Rear camera */
 		rotation = <270>;
 
+		lens-focus = <&sub_cam_actuator>;
+
 		status = "okay";
 
 		port {
@@ -693,8 +702,13 @@
 				link-frequencies = /bits/ 64 <500000000>;
 			};
 		};
+	};
 
-	/* onnn,lc898217xc @ 74 */
+	sub_cam_actuator: actuator@74 {
+		compatible = "onnn,lc898217xc";
+		reg = <0x74>;
+		vana-supply = <&sub_cam_vaf>;
+		vdd-supply = <&cam_vio_1p8>;
 	};
 };
 
