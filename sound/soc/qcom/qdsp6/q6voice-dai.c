@@ -200,6 +200,18 @@ static const struct snd_kcontrol_new cs_voice_tx_mixer_controls[] = {
 		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
 	SOC_SINGLE_EXT("SLIMBUS_0_TX", SLIMBUS_0_TX, CS_VOICE, 1, 0,
 		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_1_TX", SLIMBUS_1_TX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_2_TX", SLIMBUS_2_TX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_3_TX", SLIMBUS_3_TX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_4_TX", SLIMBUS_4_TX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_5_TX", SLIMBUS_5_TX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_6_TX", SLIMBUS_6_TX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
 };
 
 static const struct snd_kcontrol_new voicemmode1_tx_mixer_controls[] = {
@@ -214,6 +226,18 @@ static const struct snd_kcontrol_new voicemmode1_tx_mixer_controls[] = {
 	SOC_SINGLE_EXT("QUIN_MI2S_TX", QUINARY_MI2S_TX, VOICEMMODE1, 1, 0,
 		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
 	SOC_SINGLE_EXT("SLIMBUS_0_TX", SLIMBUS_0_TX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_1_TX", SLIMBUS_1_TX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_2_TX", SLIMBUS_2_TX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_3_TX", SLIMBUS_3_TX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_4_TX", SLIMBUS_4_TX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_5_TX", SLIMBUS_5_TX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
+	SOC_SINGLE_EXT("SLIMBUS_6_TX", SLIMBUS_6_TX, VOICEMMODE1, 1, 0,
 		       q6voice_get_mixer_capture, q6voice_put_mixer_capture),
 };
 
@@ -259,6 +283,48 @@ static const struct snd_kcontrol_new slimbus_0_rx_mixer_controls[] = {
 		       q6voice_get_mixer_playback, q6voice_put_mixer_playback),
 };
 
+static const struct snd_kcontrol_new slimbus_1_rx_mixer_controls[] = {
+	SOC_SINGLE_EXT("CS-Voice", SLIMBUS_1_RX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback),
+	SOC_SINGLE_EXT("VoiceMMode1", SLIMBUS_1_RX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback)
+};
+
+static const struct snd_kcontrol_new slimbus_2_rx_mixer_controls[] = {
+	SOC_SINGLE_EXT("CS-Voice", SLIMBUS_2_RX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback),
+	SOC_SINGLE_EXT("VoiceMMode1", SLIMBUS_2_RX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback)
+};
+
+static const struct snd_kcontrol_new slimbus_3_rx_mixer_controls[] = {
+	SOC_SINGLE_EXT("CS-Voice", SLIMBUS_3_RX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback),
+	SOC_SINGLE_EXT("VoiceMMode1", SLIMBUS_3_RX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback)
+};
+
+static const struct snd_kcontrol_new slimbus_4_rx_mixer_controls[] = {
+	SOC_SINGLE_EXT("CS-Voice", SLIMBUS_4_RX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback),
+	SOC_SINGLE_EXT("VoiceMMode1", SLIMBUS_4_RX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback)
+};
+
+static const struct snd_kcontrol_new slimbus_5_rx_mixer_controls[] = {
+	SOC_SINGLE_EXT("CS-Voice", SLIMBUS_5_RX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback),
+	SOC_SINGLE_EXT("VoiceMMode1", SLIMBUS_5_RX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback)
+};
+
+static const struct snd_kcontrol_new slimbus_6_rx_mixer_controls[] = {
+	SOC_SINGLE_EXT("CS-Voice", SLIMBUS_6_RX, CS_VOICE, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback),
+	SOC_SINGLE_EXT("VoiceMMode1", SLIMBUS_6_RX, VOICEMMODE1, 1, 0,
+		       q6voice_get_mixer_playback, q6voice_put_mixer_playback)
+};
+
 static const struct snd_soc_dapm_widget q6voice_dapm_widgets[] = {
 	SND_SOC_DAPM_AIF_IN("CS-VOICE_DL1", "CS-VOICE Playback", 0, SND_SOC_NOPM, 0, 0),
 	SND_SOC_DAPM_AIF_OUT("CS-VOICE_UL1", "CS-VOICE Capture", 0, SND_SOC_NOPM, 0, 0),
@@ -288,6 +354,24 @@ static const struct snd_soc_dapm_widget q6voice_dapm_widgets[] = {
 	SND_SOC_DAPM_MIXER("SLIMBUS_0_RX Voice Mixer", SND_SOC_NOPM, 0, 0,
 			   slimbus_0_rx_mixer_controls,
 			   ARRAY_SIZE(slimbus_0_rx_mixer_controls)),
+	SND_SOC_DAPM_MIXER("SLIMBUS_1_RX Voice Mixer", SND_SOC_NOPM, 0, 0,
+			   slimbus_1_rx_mixer_controls,
+			   ARRAY_SIZE(slimbus_1_rx_mixer_controls)),
+	SND_SOC_DAPM_MIXER("SLIMBUS_2_RX Voice Mixer", SND_SOC_NOPM, 0, 0,
+			   slimbus_2_rx_mixer_controls,
+			   ARRAY_SIZE(slimbus_2_rx_mixer_controls)),
+	SND_SOC_DAPM_MIXER("SLIMBUS_3_RX Voice Mixer", SND_SOC_NOPM, 0, 0,
+			   slimbus_3_rx_mixer_controls,
+			   ARRAY_SIZE(slimbus_3_rx_mixer_controls)),
+	SND_SOC_DAPM_MIXER("SLIMBUS_4_RX Voice Mixer", SND_SOC_NOPM, 0, 0,
+			   slimbus_4_rx_mixer_controls,
+			   ARRAY_SIZE(slimbus_4_rx_mixer_controls)),
+	SND_SOC_DAPM_MIXER("SLIMBUS_5_RX Voice Mixer", SND_SOC_NOPM, 0, 0,
+			   slimbus_5_rx_mixer_controls,
+			   ARRAY_SIZE(slimbus_5_rx_mixer_controls)),
+	SND_SOC_DAPM_MIXER("SLIMBUS_6_RX Voice Mixer", SND_SOC_NOPM, 0, 0,
+			   slimbus_6_rx_mixer_controls,
+			   ARRAY_SIZE(slimbus_6_rx_mixer_controls)),
 };
 
 static const struct snd_soc_dapm_route q6voice_dapm_routes[] = {
@@ -297,6 +381,12 @@ static const struct snd_soc_dapm_route q6voice_dapm_routes[] = {
 	{ "CS-Voice Capture Mixer",	"QUAT_MI2S_TX",	"QUAT_MI2S_TX" },
 	{ "CS-Voice Capture Mixer",	"QUIN_MI2S_TX",	"QUIN_MI2S_TX" },
 	{ "CS-Voice Capture Mixer",	"SLIMBUS_0_TX",	"SLIMBUS_0_TX" },
+	{ "CS-Voice Capture Mixer",	"SLIMBUS_1_TX",	"SLIMBUS_1_TX" },
+	{ "CS-Voice Capture Mixer",	"SLIMBUS_2_TX",	"SLIMBUS_2_TX" },
+	{ "CS-Voice Capture Mixer",	"SLIMBUS_3_TX",	"SLIMBUS_3_TX" },
+	{ "CS-Voice Capture Mixer",	"SLIMBUS_4_TX",	"SLIMBUS_4_TX" },
+	{ "CS-Voice Capture Mixer",	"SLIMBUS_5_TX",	"SLIMBUS_5_TX" },
+	{ "CS-Voice Capture Mixer",	"SLIMBUS_6_TX",	"SLIMBUS_6_TX" },
 	{ "CS-VOICE_UL1",		NULL,		"CS-Voice Capture Mixer" },
 	{ "VoiceMMode1 Capture Mixer",	"PRI_MI2S_TX",	"PRI_MI2S_TX" },
 	{ "VoiceMMode1 Capture Mixer",	"SEC_MI2S_TX",	"SEC_MI2S_TX" },
@@ -304,6 +394,12 @@ static const struct snd_soc_dapm_route q6voice_dapm_routes[] = {
 	{ "VoiceMMode1 Capture Mixer",	"QUAT_MI2S_TX",	"QUAT_MI2S_TX" },
 	{ "VoiceMMode1 Capture Mixer",	"QUIN_MI2S_TX",	"QUIN_MI2S_TX" },
 	{ "VoiceMMode1 Capture Mixer",	"SLIMBUS_0_TX",	"SLIMBUS_0_TX" },
+	{ "VoiceMMode1 Capture Mixer",	"SLIMBUS_1_TX",	"SLIMBUS_1_TX" },
+	{ "VoiceMMode1 Capture Mixer",	"SLIMBUS_2_TX",	"SLIMBUS_2_TX" },
+	{ "VoiceMMode1 Capture Mixer",	"SLIMBUS_3_TX",	"SLIMBUS_3_TX" },
+	{ "VoiceMMode1 Capture Mixer",	"SLIMBUS_4_TX",	"SLIMBUS_4_TX" },
+	{ "VoiceMMode1 Capture Mixer",	"SLIMBUS_5_TX",	"SLIMBUS_5_TX" },
+	{ "VoiceMMode1 Capture Mixer",	"SLIMBUS_6_TX",	"SLIMBUS_6_TX" },
 	{ "VOICEMMODE1_UL1",		NULL,		"VoiceMMode1 Capture Mixer" },
 
 	{ "PRI_MI2S_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
@@ -312,6 +408,12 @@ static const struct snd_soc_dapm_route q6voice_dapm_routes[] = {
 	{ "QUAT_MI2S_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
 	{ "QUIN_MI2S_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
 	{ "SLIMBUS_0_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
+	{ "SLIMBUS_1_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
+	{ "SLIMBUS_2_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
+	{ "SLIMBUS_3_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
+	{ "SLIMBUS_4_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
+	{ "SLIMBUS_5_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
+	{ "SLIMBUS_6_RX Voice Mixer",	"CS-Voice",	"CS-VOICE_DL1" },
 
 	{ "PRI_MI2S_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
 	{ "SEC_MI2S_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
@@ -319,6 +421,12 @@ static const struct snd_soc_dapm_route q6voice_dapm_routes[] = {
 	{ "QUAT_MI2S_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
 	{ "QUIN_MI2S_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
 	{ "SLIMBUS_0_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
+	{ "SLIMBUS_1_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
+	{ "SLIMBUS_2_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
+	{ "SLIMBUS_3_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
+	{ "SLIMBUS_4_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
+	{ "SLIMBUS_5_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
+	{ "SLIMBUS_6_RX Voice Mixer",	"VoiceMMode1",	"VOICEMMODE1_DL1" },
 
 	{ "PRI_MI2S_RX",		NULL,		"PRI_MI2S_RX Voice Mixer" },
 	{ "SEC_MI2S_RX",		NULL,		"SEC_MI2S_RX Voice Mixer" },
@@ -326,6 +434,12 @@ static const struct snd_soc_dapm_route q6voice_dapm_routes[] = {
 	{ "QUAT_MI2S_RX",		NULL,		"QUAT_MI2S_RX Voice Mixer" },
 	{ "QUIN_MI2S_RX",		NULL,		"QUIN_MI2S_RX Voice Mixer" },
 	{ "SLIMBUS_0_RX",		NULL,		"SLIMBUS_0_RX Voice Mixer" },
+	{ "SLIMBUS_1_RX",		NULL,		"SLIMBUS_1_RX Voice Mixer" },
+	{ "SLIMBUS_2_RX",		NULL,		"SLIMBUS_2_RX Voice Mixer" },
+	{ "SLIMBUS_3_RX",		NULL,		"SLIMBUS_3_RX Voice Mixer" },
+	{ "SLIMBUS_4_RX",		NULL,		"SLIMBUS_4_RX Voice Mixer" },
+	{ "SLIMBUS_5_RX",		NULL,		"SLIMBUS_5_RX Voice Mixer" },
+	{ "SLIMBUS_6_RX",		NULL,		"SLIMBUS_6_RX Voice Mixer" },
 };
 
 static unsigned int q6voice_reg_read(struct snd_soc_component *component,
