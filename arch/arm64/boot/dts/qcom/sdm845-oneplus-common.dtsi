@@ -556,30 +556,12 @@
 				remote-endpoint = <&imx519_ep>;
 			};
 		};
-
-		port@1 {
-			reg = <1>;
-			csiphy1_ep: endpoint {
-				bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
-				data-lanes = <0 1 2 3>;
-				remote-endpoint = <&imx376k_ep>;
-			};
-		};
-
-		port@2 {
-			reg = <2>;
-			csiphy2_ep: endpoint {
-				bus-type = <MEDIA_BUS_TYPE_CSI2_DPHY>;
-				data-lanes = <0 1 2 3>;
-				remote-endpoint = <&imx371_ep>;
-			};
-		};
 	};
 };
 
 &cci_i2c0 {
 	rear_cam: camera@1a {
-		compatible = "sony,imx519";
+		compatible = "sony,imx519", "mipi-ccs";
 		reg = <0x1a>;
 
 		reset-gpios = <&tlmm 28 GPIO_ACTIVE_LOW>;
@@ -609,82 +591,6 @@
 				remote-endpoint = <&csiphy0_ep>;
 				data-lanes = <1 2 3>;
 				link-frequencies = /bits/ 64 <500399375>;
-			};
-		};
-	};
-
-	front_cam: camera@10 {
-		compatible = "sony,imx371";
-		reg = <0x10>;
-
-		reset-gpios = <&tlmm 9 GPIO_ACTIVE_LOW>;
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&front_cam_default>;
-		pinctrl-1 = <&front_cam_sleep>;
-
-		clocks = <&clock_camcc CAM_CC_MCLK1_CLK>;
-		clock-names = "xclk";
-		clock-frequency = <24000000>;
-
-		power-domains = <&clock_camcc TITAN_TOP_GDSC>;
-
-		vana-supply = <&front_cam_vana>;
-		vcore-supply = <&front_cam_vdig>;
-		vio-supply = <&cam_vio_1p8>;
-
-		orientation = <0>; /* Front camera */
-		rotation = <90>;
-
-		status = "okay";
-
-		port {
-			imx371_ep: endpoint {
-				remote-endpoint = <&csiphy2_ep>;
-				data-lanes = <1 2 3 4>;
-				link-frequencies = /bits/ 64 <654000000>;
-			};
-		};
-	};
-};
-
-&cci_i2c1 {
-	sub_cam_actuator: actuator@74 {
-		compatible = "onnn,lc898217xc";
-		reg = <0x74>;
-		vcc-supply = <&sub_cam_vaf>;
-	};
-
-	sub_cam: camera@10 {
-		compatible = "sony,imx376k";
-		reg = <0x10>;
-
-		reset-gpios = <&tlmm 23 GPIO_ACTIVE_LOW>;
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&sub_cam_default>;
-		pinctrl-1 = <&sub_cam_sleep>;
-
-		clocks = <&clock_camcc CAM_CC_MCLK2_CLK>;
-		clock-names = "xclk";
-		clock-frequency = <24000000>;
-
-		power-domains = <&clock_camcc TITAN_TOP_GDSC>;
-
-		vana-supply = <&sub_cam_vana>;
-		vcore-supply = <&sub_cam_vdig>;
-		vio-supply = <&cam_vio_1p8>;
-
-		orientation = <1>; /* Rear camera */
-		rotation = <270>;
-
-		lens-focus = <&sub_cam_actuator>;
-
-		status = "okay";
-
-		port {
-			imx376k_ep: endpoint {
-				remote-endpoint = <&csiphy1_ep>;
-				data-lanes = <1 2 3 4>;
-				link-frequencies = /bits/ 64 <500000000>;
 			};
 		};
 	};
