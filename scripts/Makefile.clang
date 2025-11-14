@@ -37,6 +37,10 @@ endif
 CLANG_FLAGS	+= -Werror=unknown-warning-option
 CLANG_FLAGS	+= -Werror=ignored-optimization-argument
 CLANG_FLAGS	+= -Werror=option-ignored
-CLANG_FLAGS	+= -Werror=unused-command-line-argument
+# Some compiler wrappers (for example, nix's cc-wrapper) pass additional
+# driver-specific arguments such as -nostdlibinc which clang sometimes
+# reports as "unused command line argument". Treat that as a warning
+# instead of an error to avoid builds failing on wrapped toolchains.
+CLANG_FLAGS	+= -Wno-unused-command-line-argument
 KBUILD_CPPFLAGS	+= $(CLANG_FLAGS)
 export CLANG_FLAGS
