@@ -800,8 +800,8 @@ static int stmfts_power_on(struct stmfts_data *sdata)
 	return 0;
 
 power_off:
-	regulator_bulk_disable(ARRAY_SIZE(sdata->regulators),
-			       sdata->regulators);
+	regulator_bulk_disable(ARRAY_SIZE(stmfts_supplies),
+			       sdata->supplies);
 	return err;
 }
 
