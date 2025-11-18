@@ -77,6 +77,7 @@ enum stmfts_regulators {
 struct stmfts_data {
 	struct i2c_client *client;
 	struct input_dev *input;
+	struct gpio_desc *reset_gpiod;
 	struct led_classdev led_cdev;
 	struct mutex mutex;
 
@@ -529,6 +530,10 @@ static int stmfts_power_on(struct stmfts_data *sdata)
 	if (err)
 		return err;
 
+	if (sdata->reset_gpiod) {
+		usleep_range(1000, 2000);
+		gpiod_set_value_cansleep(sdata->reset_gpiod, 1);
+	}
 	/*
 	 * The datasheet does not specify the power on time, but considering
 	 * that the reset time is < 10ms, I sleep 20ms to be sure
@@ -645,6 +650,14 @@ static int stmfts_probe(struct i2c_client *client)
 				      sdata->regulators);
 	if (err)
 		return err;
+
+	sdata->reset_gpiod = devm_gpiod_get_optional(&client->dev, "reset", GPIOD_OUT_HIGH);
+
+	if (IS_ERR(sdata->reset_gpiod)) {
+		dev_err(&client->dev, "failed to get reset GPIO: %ld\n",
+			PTR_ERR(sdata->reset_gpiod));
+		return PTR_ERR(sdata->reset_gpiod);
+	}
 
 	sdata->input = devm_input_allocate_device(&client->dev);
 	if (!sdata->input)
