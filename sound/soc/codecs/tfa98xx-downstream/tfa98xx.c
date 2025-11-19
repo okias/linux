@@ -16,6 +16,7 @@
 
 #include <linux/module.h>
 #include <linux/i2c.h>
+#include <linux/string.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -23,7 +24,6 @@
 #include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/device.h>
-#include <linux/firmware.h>
 #include <linux/debugfs.h>
 #include <linux/version.h>
 #include <linux/input.h>
@@ -64,14 +64,10 @@ static LIST_HEAD(profile_list);        /* list of user selectable profiles */
 static int tfa98xx_mixer_profiles = 0; /* number of user selectable profiles */
 static int tfa98xx_mixer_profile = 0;  /* current mixer profile */
 static struct snd_kcontrol_new *tfa98xx_controls;
-static TfaContainer_t *tfa98xx_container = NULL;
 
 static int tfa98xx_kmsg_regs = 0;
 static int tfa98xx_ftrace_regs = 0;
 
-static char *fw_name = "tfa98xx.cnt";
-module_param(fw_name, charp, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(fw_name, "TFA98xx DSP firmware (container file) name.");
 
 static int trace_level = 0;
 module_param(trace_level, int, S_IRUGO);
@@ -1400,11 +1396,11 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 	char *name;
 	struct tfa98xx_baseprofile *bprofile;
 
-	/* Create the following controls:
-	 *  - enum control to select the active profile
-	 *  - one volume control for each profile hosting a vstep
-	 *  - Stop control on TFA1 devices
-	 */
+        /* Create the following controls:
+         *  - enum control to select the active profile
+         *  - one volume control for each profile hosting a vstep
+         *  - stop control (legacy behaviour)
+         */
 
 	nr_controls = 2; /* Profile and stop control */
 
@@ -1490,7 +1486,7 @@ static int tfa98xx_create_controls(struct tfa98xx *tfa98xx)
 	/* set the number of user selectable profiles in the mixer */
 	tfa98xx_mixer_profiles = id;
 
-	/* Create a mixer item for stop control on TFA1 */
+        /* Create a mixer item for stop control */
 	name = devm_kzalloc(tfa98xx->codec->dev, MAX_CONTROL_NAME, GFP_KERNEL);
 	if (!name)
 		return -ENOMEM;
@@ -1930,17 +1926,14 @@ static void tfa98xx_interrupt_enable_tfa2(struct tfa98xx *tfa98xx, bool enable)
  * Tap-detection shall be active if:
  *  - the service is enabled (tapdet_open), AND
  *  - the current profile is a tap-detection profile
- * On TFA1 familiy of devices, activating tap-detection means enabling the SPK
- * interrupt if available.
  * We also update the tapdet_enabled and tapdet_poll variables.
  */
 static void tfa98xx_tapdet_check_update(struct tfa98xx *tfa98xx)
 {
-	unsigned int enable = false;
+        unsigned int enable = false;
 
-	/* Support tap-detection on TFA1 family of devices */
-	if ((tfa98xx->flags & TFA98XX_FLAG_TAPDET_AVAILABLE) == 0)
-		return;
+        if ((tfa98xx->flags & TFA98XX_FLAG_TAPDET_AVAILABLE) == 0)
+                return;
 
 	if (tfa98xx->tapdet_open &&
 		(tfa98xx->tapdet_profiles & (1 << tfa98xx->profile)))
@@ -1984,159 +1977,13 @@ static void tfa98xx_tapdet_check_update(struct tfa98xx *tfa98xx)
 /* global enable / disable interrupts */
 static void tfa98xx_interrupt_enable(struct tfa98xx *tfa98xx, bool enable)
 {
-	if (tfa98xx->flags & TFA98XX_FLAG_SKIP_INTERRUPTS)
-		return;
+        if (tfa98xx->flags & TFA98XX_FLAG_SKIP_INTERRUPTS)
+                return;
 
-	if (tfa98xx->tfa->tfa_family == 2)
-		tfa98xx_interrupt_enable_tfa2(tfa98xx, enable);
+        tfa98xx_interrupt_enable_tfa2(tfa98xx, enable);
 }
 
 /* Firmware management */
-static void tfa98xx_container_loaded(const struct firmware *cont, void *context)
-{
-	TfaContainer_t *container;
-	struct tfa98xx *tfa98xx = context;
-	enum tfa_error tfa_err;
-	int container_size;
-	int ret;
-
-	tfa98xx->dsp_fw_state = TFA98XX_DSP_FW_FAIL;
-
-	if (!cont) {
-		pr_err("Failed to read %s\n", fw_name);
-		return;
-	}
-
-	/* pr_debug("loaded %s - size: %zu\n", fw_name, cont->size); */
-
-	mutex_lock(&tfa98xx_mutex);
-	if (tfa98xx_container == NULL) {
-		container = kzalloc(cont->size, GFP_KERNEL);
-		if (container == NULL) {
-			mutex_unlock(&tfa98xx_mutex);
-			release_firmware(cont);
-			pr_err("Error allocating memory\n");
-			return;
-		}
-
-		container_size = cont->size;
-		memcpy(container, cont->data, container_size);
-		release_firmware(cont);
-
-		/* pr_debug("%.2s%.2s\n", container->version, container->subversion); */
-		/* pr_debug("%.8s\n", container->customer); */
-		/* pr_debug("%.8s\n", container->application); */
-		/* pr_debug("%.8s\n", container->type); */
-		/* pr_debug("%d ndev\n", container->ndev); */
-		/* pr_debug("%d nprof\n", container->nprof); */
-
-		tfa_err = tfa_load_cnt(container, container_size);
-		if (tfa_err != tfa_error_ok) {
-			mutex_unlock(&tfa98xx_mutex);
-			kfree(container);
-			dev_err(tfa98xx->dev, "Cannot load container file, aborting\n");
-			return;
-		}
-
-		tfa98xx_container = container;
-	}
-	else {
-		/* pr_debug("container file already loaded...\n"); */
-		container = tfa98xx_container;
-		release_firmware(cont);
-	}
-	mutex_unlock(&tfa98xx_mutex);
-
-	tfa98xx->tfa->cnt = container;
-
-	/*
-		i2c transaction limited to 64k
-		(Documentation/i2c/writing-clients)
-	*/
-	tfa98xx->tfa->buffer_size = 65536;
-
-	/* DSP messages via i2c */
-	tfa98xx->tfa->has_msg = 0;
-
-	if (tfa_dev_probe(tfa98xx->i2c->addr, tfa98xx->tfa) != 0) {
-		dev_err(tfa98xx->dev, "Failed to probe TFA98xx @ 0x%.2x\n", tfa98xx->i2c->addr);
-		return;
-	}
-
-	tfa98xx->tfa->dev_idx = tfa_cont_get_idx(tfa98xx->tfa);
-	if (tfa98xx->tfa->dev_idx < 0) {
-		dev_err(tfa98xx->dev, "Failed to find TFA98xx @ 0x%.2x in container file\n", tfa98xx->i2c->addr);
-		return;
-	}
-
-	/* Enable debug traces */
-	tfa98xx->tfa->verbose = trace_level & 1;
-
-	/* prefix is the application name from the cnt */
-	tfa_cnt_get_app_name(tfa98xx->tfa, tfa98xx->fw.name);
-
-	/* set default profile/vstep */
-	tfa98xx->profile = 0;
-	tfa98xx->vstep = 0;
-
-	/* Override default profile if requested */
-	if (strcmp(dflt_prof_name, "")) {
-		unsigned int i;
-		int nprof = tfa_cnt_get_dev_nprof(tfa98xx->tfa);
-		for (i = 0; i < nprof; i++) {
-			if (strcmp(tfa_cont_profile_name(tfa98xx, i),
-				dflt_prof_name) == 0) {
-				tfa98xx->profile = i;
-				dev_dbg(tfa98xx->dev,
-					"changing default profile to %s (%d)\n",
-					dflt_prof_name, tfa98xx->profile);
-				break;
-			}
-		}
-		if (i >= nprof)
-			dev_dbg(tfa98xx->dev,
-				"Default profile override failed (%s profile not found)\n",
-				dflt_prof_name);
-	}
-
-	tfa98xx->dsp_fw_state = TFA98XX_DSP_FW_OK;
-	/* pr_debug("Firmware init complete\n"); */
-
-	if (no_start != 0)
-		return;
-
-	/* Only controls for master device */
-	if (tfa98xx->tfa->dev_idx == 0)
-		tfa98xx_create_controls(tfa98xx);
-
-	tfa98xx_inputdev_check_register(tfa98xx);
-
-	if (tfa_is_cold(tfa98xx->tfa) == 0) {
-		/* pr_debug("Warning: device 0x%.2x is still warm\n", tfa98xx->i2c->addr); */
-		tfa_reset(tfa98xx->tfa);
-	}
-
-	/* Preload settings using internal clock on TFA2 */
-	if (tfa98xx->tfa->tfa_family == 2) {
-		mutex_lock(&tfa98xx->dsp_lock);
-		ret = tfa98xx_tfa_start(tfa98xx, tfa98xx->profile, tfa98xx->vstep);
-		if (ret == Tfa98xx_Error_Not_Supported)
-			tfa98xx->dsp_fw_state = TFA98XX_DSP_FW_FAIL;
-		mutex_unlock(&tfa98xx->dsp_lock);
-	}
-	tfa98xx_interrupt_enable(tfa98xx, true);
-}
-
-static int tfa98xx_load_container(struct tfa98xx *tfa98xx)
-{
-	tfa98xx->dsp_fw_state = TFA98XX_DSP_FW_PENDING;
-
-	return request_firmware_nowait(THIS_MODULE, FW_ACTION_HOTPLUG,
-		fw_name, tfa98xx->dev, GFP_KERNEL,
-		tfa98xx, tfa98xx_container_loaded);
-}
-
-
 static void tfa98xx_tapdet(struct tfa98xx *tfa98xx)
 {
 	unsigned int tap_pattern;
@@ -2315,10 +2162,10 @@ static void tfa98xx_dsp_init(struct tfa98xx *tfa98xx)
 				 * periodically, and re-init IC to recover if
 				 * needed.
 				 */
-				if (tfa98xx->tfa->tfa_family == 1 || tfa98xx->tfa->dev_ops.tfa_status != NULL)
-					queue_delayed_work(tfa98xx->tfa98xx_wq,
-						&tfa98xx->monitor_work,
-						1 * HZ);
+                if (tfa98xx->tfa->dev_ops.tfa_status != NULL)
+                        queue_delayed_work(tfa98xx->tfa98xx_wq,
+                                &tfa98xx->monitor_work,
+                                1 * HZ);
 				mutex_unlock(&tfa98xx->dsp_lock);
 			}
 
@@ -2654,32 +2501,45 @@ static struct snd_soc_dai_driver tfa98xx_dai[] = {
 
 static int tfa98xx_probe(struct snd_soc_component *codec)
 {
-	struct tfa98xx *tfa98xx = snd_soc_component_get_drvdata(codec);
-	int ret;
+        struct tfa98xx *tfa98xx = snd_soc_component_get_drvdata(codec);
+        int ret = 0;
 
-	snd_soc_component_init_regmap(codec, tfa98xx->regmap);
-	/* setup work queue, will be used to initial DSP on first boot up */
-	tfa98xx->tfa98xx_wq = create_singlethread_workqueue("tfa98xx");
-	if (!tfa98xx->tfa98xx_wq)
-		return -ENOMEM;
+        snd_soc_component_init_regmap(codec, tfa98xx->regmap);
+        /* setup work queue, will be used to initial DSP on first boot up */
+        tfa98xx->tfa98xx_wq = create_singlethread_workqueue("tfa98xx");
+        if (!tfa98xx->tfa98xx_wq)
+                return -ENOMEM;
 
-	INIT_DELAYED_WORK(&tfa98xx->init_work, tfa98xx_dsp_init_work);
-	INIT_DELAYED_WORK(&tfa98xx->monitor_work, tfa98xx_monitor);
-	INIT_DELAYED_WORK(&tfa98xx->interrupt_work, tfa98xx_interrupt);
-	INIT_DELAYED_WORK(&tfa98xx->tapdet_work, tfa98xx_tapdet_work);
-	INIT_DELAYED_WORK(&tfa98xx->nmodeupdate_work, tfa98xx_nmode_update_work);
+        INIT_DELAYED_WORK(&tfa98xx->init_work, tfa98xx_dsp_init_work);
+        INIT_DELAYED_WORK(&tfa98xx->monitor_work, tfa98xx_monitor);
+        INIT_DELAYED_WORK(&tfa98xx->interrupt_work, tfa98xx_interrupt);
+        INIT_DELAYED_WORK(&tfa98xx->tapdet_work, tfa98xx_tapdet_work);
+        INIT_DELAYED_WORK(&tfa98xx->nmodeupdate_work, tfa98xx_nmode_update_work);
 
-	tfa98xx->codec = codec;
+        tfa98xx->codec = codec;
 
-	ret = tfa98xx_load_container(tfa98xx);
-	/* pr_debug("Container loading requested: %d\n", ret); */
+        strscpy(tfa98xx->fw.name, "tfa98xx", sizeof(tfa98xx->fw.name));
+        tfa98xx->dsp_fw_state = TFA98XX_DSP_FW_FAIL;
 
-	tfa98xx_add_widgets(tfa98xx);
+        if (!tfa98xx->tfa || !tfa98xx->tfa->cnt) {
+                dev_err(codec->dev,
+                        "no DSP container available; firmware loading support was removed\n");
+                ret = -ENOENT;
+                goto err_destroy_wq;
+        }
 
-	dev_dbg(codec->dev, "tfa98xx codec registered (%s)",
-		tfa98xx->fw.name);
+        tfa98xx_add_widgets(tfa98xx);
 
-	return ret;
+        dev_dbg(codec->dev, "tfa98xx codec registered (%s)",
+                tfa98xx->fw.name);
+
+        return 0;
+
+err_destroy_wq:
+        destroy_workqueue(tfa98xx->tfa98xx_wq);
+        tfa98xx->tfa98xx_wq = NULL;
+
+        return ret;
 }
 
 static void tfa98xx_remove(struct snd_soc_component *codec)
@@ -2754,8 +2614,7 @@ static irqreturn_t tfa98xx_irq(int irq, void *data)
 {
 	struct tfa98xx *tfa98xx = data;
 
-	if (tfa98xx->tfa->tfa_family == 2)
-		tfa98xx_irq_tfa2(tfa98xx);
+	tfa98xx_irq_tfa2(tfa98xx);
 
 	return IRQ_HANDLED;
 }
@@ -3029,38 +2888,14 @@ static int tfa98xx_i2c_probe(struct i2c_client *i2c)
 			tfa98xx->flags |= TFA98XX_FLAG_TDM_DEVICE;
 			/* tfa98xx->flags |= TFA98XX_FLAG_TAPDET_AVAILABLE; */
 			break;
-		case 0x94: /* tfa9894 */
-			pr_info("TFA9894 detected\n");
-			tfa98xx->flags |= TFA98XX_FLAG_MULTI_MIC_INPUTS;
-			tfa98xx->flags |= TFA98XX_FLAG_TDM_DEVICE;
-			break;
-		case 0x80: /* tfa9890 */
-		case 0x81: /* tfa9890 */
-			pr_info("TFA9890 detected\n");
-			tfa98xx->flags |= TFA98XX_FLAG_SKIP_INTERRUPTS;
-			break;
-		case 0x92: /* tfa9891 */
-			pr_info("TFA9891 detected\n");
-			tfa98xx->flags |= TFA98XX_FLAG_SAAM_AVAILABLE;
-			tfa98xx->flags |= TFA98XX_FLAG_SKIP_INTERRUPTS;
-			break;
-		case 0x12: /* tfa9895 */
-			pr_info("TFA9895 detected\n");
-			tfa98xx->flags |= TFA98XX_FLAG_SKIP_INTERRUPTS;
-			break;
-		case 0x97:
-			pr_info("TFA9897 detected\n");
-			tfa98xx->flags |= TFA98XX_FLAG_SKIP_INTERRUPTS;
-			tfa98xx->flags |= TFA98XX_FLAG_TDM_DEVICE;
-			break;
-		case 0x96:
-			pr_info("TFA9896 detected\n");
-			tfa98xx->flags |= TFA98XX_FLAG_SKIP_INTERRUPTS;
-			tfa98xx->flags |= TFA98XX_FLAG_TDM_DEVICE;
-			break;
-		default:
-			pr_info("Unsupported device revision (0x%x)\n", reg & 0xff);
-			return -EINVAL;
+                case 0x94: /* tfa9894 */
+                        pr_info("TFA9894 detected\n");
+                        tfa98xx->flags |= TFA98XX_FLAG_MULTI_MIC_INPUTS;
+                        tfa98xx->flags |= TFA98XX_FLAG_TDM_DEVICE;
+                        break;
+                default:
+                        pr_info("Unsupported device revision (0x%x)\n", reg & 0xff);
+                        return -EINVAL;
 		}
 	}
 
@@ -3167,14 +3002,10 @@ static void tfa98xx_i2c_remove(struct i2c_client *i2c)
 	if (gpio_is_valid(tfa98xx->reset_gpio))
 		devm_gpiod_put(&i2c->dev, gpio_to_desc(tfa98xx->reset_gpio));
 
-	mutex_lock(&tfa98xx_mutex);
-	list_del(&tfa98xx->list);
-	tfa98xx_device_count--;
-	if (tfa98xx_device_count == 0) {
-		kfree(tfa98xx_container);
-		tfa98xx_container = NULL;
-	}
-	mutex_unlock(&tfa98xx_mutex);
+        mutex_lock(&tfa98xx_mutex);
+        list_del(&tfa98xx->list);
+        tfa98xx_device_count--;
+        mutex_unlock(&tfa98xx_mutex);
 
 	return;
 }
@@ -3191,16 +3022,11 @@ static struct of_device_id tfa98xx_dt_match[] = {
 	{.compatible = "tfa,tfa9872" },
 	{.compatible = "tfa,tfa9873" },
 	{.compatible = "tfa,tfa9875" },
-	{.compatible = "tfa,tfa9874" },
-	{.compatible = "tfa,tfa9878" },
-	{.compatible = "tfa,tfa9888" },
-	{.compatible = "tfa,tfa9890" },
-	{.compatible = "tfa,tfa9891" },
-	{.compatible = "tfa,tfa9894" },
-	{.compatible = "tfa,tfa9895" },
-	{.compatible = "tfa,tfa9896" },
-	{.compatible = "tfa,tfa9897" },
-	{.compatible = "tfa,tfa9912" },
+        {.compatible = "tfa,tfa9874" },
+        {.compatible = "tfa,tfa9878" },
+        {.compatible = "tfa,tfa9888" },
+        {.compatible = "tfa,tfa9894" },
+        {.compatible = "tfa,tfa9912" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, tfa98xx_dt_match);

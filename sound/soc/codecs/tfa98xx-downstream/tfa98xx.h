@@ -90,8 +90,7 @@ struct tfa98xx {
 	int rst_gpio;
 	u16 rev;
 	int audio_mode;
-	struct tfa98xx_firmware fw;
-	char *fw_name;
+        struct tfa98xx_firmware fw;
 	int rate;
 	wait_queue_head_t wq;
 	struct device *dev;

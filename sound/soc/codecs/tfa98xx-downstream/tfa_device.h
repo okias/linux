@@ -116,7 +116,6 @@ struct tfa_device {
 	int bitwidth;       /**bitwdith from alsa input stream*/
 	unsigned char slave_address; /**< I2C slave address (not shifted) */
 	unsigned short rev;     /**< full revid of this device */
-	unsigned char tfa_family; /**< tfa1/tfa2 */
 	enum featureSupport supportDrc;
 	enum featureSupport supportFramework;
 	enum featureSupport support_saam;
@@ -126,7 +125,7 @@ struct tfa_device {
 	int vstep;              /**< active vstep */
 	unsigned char spkr_count;
 	unsigned char spkr_select;
-	unsigned char support_tcoef;/**< legacy tfa9887, will be removed */
+        unsigned char support_tcoef;/**< tCoef support flag */
 	enum Tfa98xx_DAI daimap; /**< supported audio interface types */
 	int mohm[3]; /**< speaker calibration values in milli ohms -1 is error */
 	struct tfa_device_ops dev_ops;

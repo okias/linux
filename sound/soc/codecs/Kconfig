@@ -2197,12 +2197,17 @@ config SND_SOC_TDA7419
 	select REGMAP_I2C
 
 config SND_SOC_TFA98XX
-	tristate "NXP/Goodix TFA98XX"
-	depends on I2C
-	select REGMAP_I2C
-	help
-	  Enable support for NXP (now Goodix) TFA98XX speaker amplifiers, e.g. TFA98XX.
-	  Downstream driver, needs rewrite and upstreaming to mainline.
+       tristate "NXP/Goodix TFA98XX"
+       depends on I2C
+       select REGMAP_I2C
+       help
+         Enable support for NXP (now Goodix) second-generation TFA98XX speaker
+         amplifiers, e.g. TFA9872/TFA9873/TFA9874/TFA9875/TFA9878/TFA9888/
+         TFA9894/TFA9912. The downstream driver no longer loads DSP container
+         firmware via request_firmware(); board-specific software must provide
+         the configuration data before the codec probes or the driver will fail
+         to bind. The driver still needs a full rewrite before it can be
+         submitted upstream.
 
 config SND_SOC_TFA9879
 	tristate "NXP Semiconductors TFA9879 amplifier"

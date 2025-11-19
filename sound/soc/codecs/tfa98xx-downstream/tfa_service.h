@@ -77,7 +77,6 @@ extern "C" {
 
 /* speaker related parameters */
 #define TFA2_SPEAKERPARAMETER_LENGTH		(3*151)	/* MAX2=450 */
-#define TFA1_SPEAKERPARAMETER_LENGTH		(3*141)	/* MAX1=423 */
 
 /* vstep related parameters */
 #define TFA2_ALGOPARAMETER_LENGTH			(3*304)	/* N1B = (304) 305 is including the cmd-id */
@@ -85,8 +84,6 @@ extern "C" {
 #define TFA72_ALGOPARAMETER_LENGTH_STEREO	(3*356)
 #define TFA2_MBDRCPARAMETER_LENGTH			(3*152)	/* 154 is including the cmd-id */
 #define TFA72_MBDRCPARAMETER_LENGTH			(3*98)	
-#define TFA1_PRESET_LENGTH					87
-#define TFA1_DRC_LENGTH						381		/* 127 words */
 #define TFA2_FILTERCOEFSPARAMETER_LENGTH	(3*168) /* 170 is including the cmd-id */
 #define TFA72_FILTERCOEFSPARAMETER_LENGTH	(3*156) 
 
@@ -304,11 +301,6 @@ enum Tfa98xx_DMEM {
 	Tfa98xx_DMEM_YMEM = 2,
 	Tfa98xx_DMEM_IOMEM = 3,
 };
-
-/**
- * lookup the device type and return the family type
- */
-int tfa98xx_dev2family(int dev_type);
 
 /**
  *  register definition structure
@@ -869,8 +861,8 @@ uint16_t tfaContBfEnum(const char *name, unsigned short rev);
  */
 uint16_t tfaContBfEnumAny(const char *name);
 
-#define TFA_FAM(tfa, fieldname) ((tfa->tfa_family == 1) ? TFA1_BF_##fieldname :  TFA2_BF_##fieldname)
-#define TFA_FAM_FW(tfa, fwname) ((tfa->tfa_family == 1) ? TFA1_FW_##fwname :  TFA2_FW_##fwname)
+#define TFA_FAM(tfa, fieldname) (TFA2_BF_##fieldname)
+#define TFA_FAM_FW(tfa, fwname) (TFA2_FW_##fwname)
 #define TFA2_FAM_TDM(tfa, fieldname) (((tfa->rev & 0xff) == 0x94) ? TFA9894_BF_##fieldname :  TFA2_BF_##fieldname)
 
 /* set/get bit fields to HW register*/

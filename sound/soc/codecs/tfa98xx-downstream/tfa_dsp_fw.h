@@ -66,8 +66,6 @@ enum tfa_fw_event { /* not all available on each device */
 #define FW_PAR_ID_SET_GAINS             0x0A
 #define FW_PAR_ID_SET_MEMTRACK          0x0B
 #define FW_PAR_ID_SET_FWKUSECASE		0x11
-#define TFA1_FW_PAR_ID_SET_CURRENT_DELAY 0x03
-#define TFA1_FW_PAR_ID_SET_CURFRAC_DELAY 0x06
 /* GET */
 #define FW_PAR_ID_GET_MEMORY            0x83
 #define FW_PAR_ID_GLOBAL_GET_INFO       0x84
@@ -136,7 +134,6 @@ enum tfa_fw_event { /* not all available on each device */
 
 /* the maximum message length in the communication with the DSP */
 #define TFA2_MAX_PARAM_SIZE (507*3) /* TFA2 */
-#define TFA1_MAX_PARAM_SIZE (145*3) /* TFA1 */
 
 #define ROUND_DOWN(a,n) (((a)/(n))*(n))
 
@@ -145,9 +142,7 @@ enum tfa_fw_event { /* not all available on each device */
 #define FEATURE1_DRC   0x200 /* bit9 NOT set means DRC expected */
 
 /* DSP firmware xmem defines */
-#define TFA1_FW_XMEM_CALIBRATION_DONE	231
 #define TFA2_FW_XMEM_CALIBRATION_DONE   516
-#define TFA1_FW_XMEM_COUNT_BOOT			0xa1
 #define TFA2_FW_XMEM_COUNT_BOOT			512
 #define TFA2_FW_XMEM_CMD_COUNT			520
 
@@ -157,6 +152,5 @@ enum tfa_fw_event { /* not all available on each device */
 #define TFA_FW_XMEM_CMD_COUNT 			TFA_FAM_FW(tfa,XMEM_CMD_COUNT)
 
 #define TFA2_FW_ReZ_SCALE	65536
-#define TFA1_FW_ReZ_SCALE	16384
 
 #endif /* TFA98XX_INTERNALS_H */
