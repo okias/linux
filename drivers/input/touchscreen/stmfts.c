@@ -7,6 +7,7 @@
 #include <linux/delay.h>
 #include <linux/i2c.h>
 #include <linux/input/mt.h>
+#include <linux/gpio/consumer.h>
 #include <linux/input/touchscreen.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -78,6 +79,7 @@ struct stmfts_data {
 	struct i2c_client *client;
 	struct input_dev *input;
 	struct gpio_desc *reset_gpiod;
+	struct gpio_desc *switch_gpiod;
 	struct led_classdev led_cdev;
 	struct mutex mutex;
 
@@ -651,7 +653,16 @@ static int stmfts_probe(struct i2c_client *client)
 	if (err)
 		return err;
 
-	sdata->reset_gpiod = devm_gpiod_get_optional(&client->dev, "reset", GPIOD_OUT_HIGH);
+	sdata->reset_gpiod = devm_gpiod_get_optional(&client->dev, "reset", GPIOD_OUT_LOW);
+
+	sdata->switch_gpiod = devm_gpiod_get_optional(&client->dev, "switch", GPIOD_OUT_LOW);
+	if (IS_ERR(sdata->switch_gpiod)) {
+		dev_err(&client->dev, "failed to get switch GPIO: %ld\n",
+			PTR_ERR(sdata->switch_gpiod));
+		return PTR_ERR(sdata->switch_gpiod);
+	}
+	if (sdata->switch_gpiod)
+		gpiod_set_value_cansleep(sdata->switch_gpiod, 1);
 
 	if (IS_ERR(sdata->reset_gpiod)) {
 		dev_err(&client->dev, "failed to get reset GPIO: %ld\n",

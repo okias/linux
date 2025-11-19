@@ -44,6 +44,10 @@ properties:
     description: Reset GPIO (active-low)
     maxItems: 1
 
+  switch-gpios:
+    description: Select between AP and SLPI
+    maxItems: 1
+
 required:
   - compatible
   - reg
