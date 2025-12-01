@@ -622,7 +622,7 @@
 	};
 
 	rear_cam: camera@1a {
-		compatible = "sony,imx519";
+		compatible = "sony,imx519", "mipi-ccs";
 		reg = <0x1a>;
 
 		reset-gpios = <&tlmm 28 GPIO_ACTIVE_LOW>;
