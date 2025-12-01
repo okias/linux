@@ -289,18 +289,23 @@ ipu6_isys_buf_to_fw_frame_buf(struct ipu6_fw_isys_frame_buff_set_abi *set,
 /* Start streaming for real. The buffer list must be available. */
 static int ipu6_isys_stream_start(struct ipu6_isys_video *av)
 {
-	struct ipu6_isys_stream *stream = av->stream;
-	struct device *dev = &stream->isys->adev->auxdev.dev;
+	struct device *dev = &av->isys->adev->auxdev.dev;
 	struct ipu6_isys_buffer_list bl;
 	int ret;
 
-	guard(mutex)(&stream->isys->stream_mutex);
+	guard(mutex)(&av->isys->stream_mutex);
 	ret = ipu6_isys_video_set_streaming(av, 1);
 	if (ret)
 		return ret;
 
+	if (!av->stream)
+		return 0;
 	if (!av->csi2->streaming)
 		return 0;
+
+	struct ipu6_isys_stream *stream = av->stream;
+
+	guard(mutex)(&stream->mutex);
 
 	do {
 		struct ipu6_fw_isys_frame_buff_set_abi *buf = NULL;
@@ -427,7 +432,6 @@ static int ipu6_isys_link_fmt_validate(struct ipu6_isys_queue *aq)
 		media_pad_remote_pad_first(av->vdev.entity.pads);
 	struct v4l2_subdev *sd;
 	u32 r_stream, code;
-	int ret;
 
 	if (!remote_pad)
 		return -ENOTCONN;
@@ -442,12 +446,6 @@ static int ipu6_isys_link_fmt_validate(struct ipu6_isys_queue *aq)
 					       r_stream);
 
 	v4l2_subdev_unlock_state(state);
-
-	if (ret) {
-		dev_dbg(dev, "failed to get %s: pad %d, stream:%d format\n",
-			sd->entity.name, remote_pad->index, r_stream);
-		return ret;
-	}
 
 	if (format.width != ipu6_isys_get_frame_width(av) ||
 	    format.height != ipu6_isys_get_frame_height(av)) {
@@ -524,7 +522,6 @@ static void return_buffers(struct ipu6_isys_queue *aq,
 static void ipu6_isys_stream_cleanup(struct ipu6_isys_video *av)
 {
 	video_device_pipeline_stop(&av->vdev);
-	ipu6_isys_put_stream(av->stream);
 	av->stream = NULL;
 }
 
@@ -535,7 +532,6 @@ static int start_streaming(struct vb2_queue *q, unsigned int count)
 	struct device *dev = &av->isys->adev->auxdev.dev;
 	const struct ipu6_isys_pixelformat *pfmt =
 		ipu6_isys_get_isys_format(ipu6_isys_get_format(av), 0);
-	struct ipu6_isys_stream *stream;
 	struct media_pad *source_pad, *remote_pad;
 	bool first;
 	int ret;
@@ -558,12 +554,13 @@ static int start_streaming(struct vb2_queue *q, unsigned int count)
 		goto out_return_buffers;
 	}
 
-	ret = ipu6_isys_setup_video(av, remote_pad, source_pad);
-	if (ret < 0) {
-		dev_dbg(dev, "failed to setup video\n");
+	bool has_pipeline = (bool)video_device_pipeline(&av->vdev);
+
+	ret = video_device_pipeline_alloc_start(&av->vdev);
+	if (ret < 0)
 		goto out_return_buffers;
-	}
-	first = ret;
+
+	first = !has_pipeline;
 
 	ret = ipu6_isys_link_fmt_validate(aq);
 	if (ret) {
@@ -577,29 +574,13 @@ static int start_streaming(struct vb2_queue *q, unsigned int count)
 	if (ret)
 		goto out_pipeline_stop;
 
-	stream = av->stream;
-	mutex_lock(&stream->mutex);
-	if (first) {
-		ret = ipu6_isys_video_prepare_stream(av, source_pad->entity);
-		if (ret)
-			goto out_fw_close;
-	}
-
-	list_add(&aq->node, &stream->queues);
-
 	ret = ipu6_isys_stream_start(av);
 	if (ret)
-		goto out_stream_start;
-
-	mutex_unlock(&stream->mutex);
+		goto out_fw_close;
 
 	return 0;
 
-out_stream_start:
-	list_del(&aq->node);
-
 out_fw_close:
-	mutex_unlock(&stream->mutex);
 	ipu6_isys_fw_close(av->isys);
 
 out_pipeline_stop:
@@ -615,16 +596,10 @@ static void stop_streaming(struct vb2_queue *q)
 {
 	struct ipu6_isys_queue *aq = vb2_queue_to_isys_queue(q);
 	struct ipu6_isys_video *av = ipu6_isys_queue_to_video(aq);
-	struct ipu6_isys_stream *stream = av->stream;
-
-	mutex_lock(&stream->mutex);
 
 	mutex_lock(&av->isys->stream_mutex);
 	ipu6_isys_video_set_streaming(av, 0);
-	list_del(&aq->node);
 	mutex_unlock(&av->isys->stream_mutex);
-
-	mutex_unlock(&stream->mutex);
 
 	ipu6_isys_stream_cleanup(av);
 

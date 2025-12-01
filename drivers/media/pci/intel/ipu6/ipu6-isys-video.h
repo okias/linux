@@ -46,12 +46,13 @@ struct ipu6_isys_stream {
 	atomic_t sequence;
 	unsigned int seq_index;
 	struct sequence_info seq[IPU6_ISYS_MAX_PARALLEL_SOF];
-	int stream_source;
 	int stream_handle;
 	unsigned int nr_output_pins;
 	struct ipu6_isys_subdev *asd;
-
 	struct list_head queues;
+	struct list_head csi2_entry;
+	struct list_head isys_entry;
+
 	struct completion stream_open_completion;
 	struct completion stream_close_completion;
 	struct completion stream_start_completion;
@@ -79,6 +80,7 @@ struct ipu6_isys_video {
 	u32 source_stream;
 	u8 vc;
 	u8 dt;
+	u8 sink_stream;
 };
 
 #define ipu6_isys_queue_to_video(__aq) \
@@ -89,11 +91,12 @@ extern const struct ipu6_isys_pixelformat ipu6_isys_pfmts_packed[];
 
 const struct ipu6_isys_pixelformat *
 ipu6_isys_get_isys_format(u32 pixelformat, u32 code);
-int ipu6_isys_start_stream_firmware(struct ipu6_isys_video *av);
-void ipu6_isys_stop_streaming_firmware(struct ipu6_isys_video *av);
-void ipu6_isys_close_streaming_firmware(struct ipu6_isys_video *av);
-int ipu6_isys_video_prepare_stream(struct ipu6_isys_video *av,
-				   struct media_entity *source_entity);
+void ipu6_isys_free_streams_firmware(struct ipu6_isys_csi2 *csi2);
+int ipu6_isys_alloc_start_streams_firmware(struct ipu6_isys_csi2 *csi2,
+					   struct v4l2_subdev_state *state,
+					   struct v4l2_mbus_frame_desc *desc);
+void ipu6_isys_stop_streams_firmware(struct ipu6_isys_csi2 *csi2);
+void ipu6_isys_close_streams_firmware(struct ipu6_isys_csi2 *csi2);
 int ipu6_isys_video_set_streaming(struct ipu6_isys_video *av, int state);
 int ipu6_isys_fw_open(struct ipu6_isys *isys);
 void ipu6_isys_fw_close(struct ipu6_isys *isys);
@@ -102,7 +105,6 @@ int ipu6_isys_setup_video(struct ipu6_isys_video *av,
 			  struct media_pad *source_pad);
 int ipu6_isys_video_init(struct ipu6_isys_video *av);
 void ipu6_isys_video_cleanup(struct ipu6_isys_video *av);
-void ipu6_isys_put_stream(struct ipu6_isys_stream *stream);
 struct ipu6_isys_stream *
 ipu6_isys_query_stream_by_handle(struct ipu6_isys *isys, u8 stream_handle);
 struct ipu6_isys_stream *

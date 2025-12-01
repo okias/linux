@@ -4,6 +4,7 @@
 #ifndef IPU6_ISYS_H
 #define IPU6_ISYS_H
 
+#include <linux/idr.h>
 #include <linux/irqreturn.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
@@ -102,8 +103,8 @@ struct ipu6_isys {
 	u32 isr_csi2_bits;
 	u32 csi2_rx_ctrl_cached;
 	spinlock_t streams_lock;
-	struct ipu6_isys_stream streams[IPU6_ISYS_MAX_STREAMS];
-	int streams_ref_count[IPU6_ISYS_MAX_STREAMS];
+	struct ipu6_isys_stream *streams_by_handle[IPU6_ISYS_MAX_STREAMS];
+	struct completion stream_completion;
 	void *fwcom;
 	u32 phy_termcal_val;
 	bool need_reset;
@@ -131,6 +132,7 @@ struct ipu6_isys {
 	struct list_head framebuflist;
 	struct list_head framebuflist_fw;
 	struct v4l2_async_notifier notifier;
+	struct ida streams;
 };
 
 struct isys_fw_msgs {

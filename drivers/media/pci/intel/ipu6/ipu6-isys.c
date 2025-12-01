@@ -162,23 +162,6 @@ unregister_subdev:
 	return ret;
 }
 
-static void isys_stream_init(struct ipu6_isys *isys)
-{
-	u32 i;
-
-	for (i = 0; i < IPU6_ISYS_MAX_STREAMS; i++) {
-		mutex_init(&isys->streams[i].mutex);
-		init_completion(&isys->streams[i].stream_open_completion);
-		init_completion(&isys->streams[i].stream_close_completion);
-		init_completion(&isys->streams[i].stream_start_completion);
-		init_completion(&isys->streams[i].stream_stop_completion);
-		INIT_LIST_HEAD(&isys->streams[i].queues);
-		isys->streams[i].isys = isys;
-		isys->streams[i].stream_handle = i;
-		isys->streams[i].vc = INVALID_VC_ID;
-	}
-}
-
 static void isys_csi2_unregister_subdevices(struct ipu6_isys *isys)
 {
 	const struct ipu6_isys_internal_csi2_pdata *csi2 =
@@ -344,21 +327,15 @@ static void ipu6_isys_csi2_isr(struct ipu6_isys_csi2 *csi2)
 	source = csi2->asd.source;
 	for (i = 0; i < NR_OF_CSI2_VC; i++) {
 		if (status & IPU_CSI_RX_IRQ_FS_VC(i)) {
-			stream = ipu6_isys_query_stream_by_source(csi2->isys,
-								  source, i);
-			if (stream) {
+			stream = csi2->streams_by_vc[i];
+			if (stream)
 				ipu6_isys_csi2_sof_event_by_stream(stream);
-				ipu6_isys_put_stream(stream);
-			}
 		}
 
 		if (status & IPU_CSI_RX_IRQ_FE_VC(i)) {
-			stream = ipu6_isys_query_stream_by_source(csi2->isys,
-								  source, i);
-			if (stream) {
+			stream = csi2->streams_by_vc[i];
+			if (stream)
 				ipu6_isys_csi2_eof_event_by_stream(stream);
-				ipu6_isys_put_stream(stream);
-			}
 		}
 	}
 }
@@ -1011,7 +988,6 @@ static int isys_probe(struct auxiliary_device *auxdev,
 	struct ipu6_device *isp = adev->isp;
 	const struct firmware *fw;
 	struct ipu6_isys *isys;
-	unsigned int i;
 	int ret;
 
 	if (!isp->bus_ready_to_probe)
@@ -1052,7 +1028,7 @@ static int isys_probe(struct auxiliary_device *auxdev,
 
 	dev_set_drvdata(&auxdev->dev, isys);
 
-	isys_stream_init(isys);
+	ida_init(&isys->streams);
 
 	if (!isp->secure_mode) {
 		fw = isp->cpd_fw;
@@ -1099,9 +1075,6 @@ release_firmware:
 	if (!isp->secure_mode)
 		release_firmware(adev->fw);
 
-	for (i = 0; i < IPU6_ISYS_MAX_STREAMS; i++)
-		mutex_destroy(&isys->streams[i].mutex);
-
 	mutex_destroy(&isys->mutex);
 	mutex_destroy(&isys->stream_mutex);
 
@@ -1115,7 +1088,8 @@ static void isys_remove(struct auxiliary_device *auxdev)
 	struct ipu6_bus_device *adev = auxdev_to_adev(auxdev);
 	struct ipu6_isys *isys = dev_get_drvdata(&auxdev->dev);
 	struct ipu6_device *isp = adev->isp;
-	unsigned int i;
+
+	ida_destroy(&isys->streams);
 
 	free_fw_msg_bufs(isys);
 
@@ -1129,9 +1103,6 @@ static void isys_remove(struct auxiliary_device *auxdev)
 		ipu6_buttress_unmap_fw_image(adev, &adev->fw_sgt);
 		release_firmware(adev->fw);
 	}
-
-	for (i = 0; i < IPU6_ISYS_MAX_STREAMS; i++)
-		mutex_destroy(&isys->streams[i].mutex);
 
 	mutex_destroy(&isys->stream_mutex);
 	mutex_destroy(&isys->mutex);
@@ -1213,7 +1184,8 @@ static int isys_isr_one(struct ipu6_bus_device *adev)
 		goto leave;
 	}
 
-	stream = ipu6_isys_query_stream_by_handle(isys, resp->stream_handle);
+	stream = resp->stream_handle < IPU6_ISYS_MAX_STREAMS ?
+		isys->streams_by_handle[resp->stream_handle] : NULL;
 	if (!stream) {
 		dev_err(&adev->auxdev.dev, "stream of stream_handle %u is unused\n",
 			resp->stream_handle);
@@ -1292,7 +1264,6 @@ static int isys_isr_one(struct ipu6_bus_device *adev)
 		break;
 	}
 
-	ipu6_isys_put_stream(stream);
 leave:
 	ipu6_fw_isys_put_resp(isys->fwcom, IPU6_BASE_MSG_RECV_QUEUES);
 	return 0;
