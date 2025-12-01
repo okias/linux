@@ -399,6 +399,8 @@ static int ipu6_isys_csi2_enable_streams(struct v4l2_subdev *sd,
 	u64 sink_streams;
 	int ret;
 
+	lockdep_assert_held(&csi2->isys->stream_mutex);
+
 	list_add(&av->csi2_entry, &csi2->av_head);
 
 	if (!ipu6_isys_csi2_streaming_change(asd, state, pad, true))
@@ -456,6 +458,8 @@ static int ipu6_isys_csi2_disable_streams(struct v4l2_subdev *sd,
 		container_of_const(vdev_pad, struct ipu6_isys_video, pad);
 	struct v4l2_subdev *remote_sd;
 	u64 sink_streams;
+
+	lockdep_assert_held(&csi2->isys->stream_mutex);
 
 	if (!ipu6_isys_csi2_streaming_change(asd, state, pad, false))
 		goto out_del_csi2_entry;
