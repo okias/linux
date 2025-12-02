@@ -44,6 +44,10 @@ struct ipu6_isys_csi2 {
 	u32 receiver_errors;
 	unsigned int nlanes;
 	unsigned int port;
+	struct {
+		u32 stream_data_rate;
+		bool force_iwake_disable;
+	} watermark;
 	bool streaming;
 	u64 stream_ids;
 };
