@@ -98,6 +98,27 @@ enum ltr_did_type {
 	LTR_TYPE_MAX
 };
 
+struct ltr_did {
+	union {
+		u32 value;
+		struct {
+			u8 val0;
+			u8 val1;
+			u8 val2;
+			u8 val3;
+		} bits;
+	} lut_ltr;
+	union {
+		u32 value;
+		struct {
+			u8 th0;
+			u8 th1;
+			u8 th2;
+			u8 th3;
+		} bits;
+	} lut_fill_time;
+};
+
 #define ISYS_PM_QOS_VALUE	300
 
 static int isys_isr_one(struct ipu6_bus_device *adev);
@@ -403,20 +424,6 @@ static irqreturn_t isys_isr(struct ipu6_bus_device *adev)
 	return IRQ_HANDLED;
 }
 
-static void get_lut_ltrdid(struct ipu6_isys *isys, struct ltr_did *pltr_did)
-{
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
-	struct ltr_did ltrdid_default;
-
-	ltrdid_default.lut_ltr.value = LTR_DEFAULT_VALUE;
-	ltrdid_default.lut_fill_time.value = FILL_TIME_DEFAULT_VALUE;
-
-	if (iwake_watermark->ltrdid.lut_ltr.value)
-		*pltr_did = iwake_watermark->ltrdid;
-	else
-		*pltr_did = ltrdid_default;
-}
-
 static int set_iwake_register(struct ipu6_isys *isys, u32 index, u32 value)
 {
 	struct device *dev = &isys->adev->auxdev.dev;
@@ -512,21 +519,14 @@ static void set_iwake_ltrdid(struct ipu6_isys *isys, u16 ltr, u16 did,
  */
 static void enable_iwake(struct ipu6_isys *isys, bool enable)
 {
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
 	int ret;
 
-	mutex_lock(&iwake_watermark->mutex);
-
-	if (iwake_watermark->iwake_enabled == enable) {
-		mutex_unlock(&iwake_watermark->mutex);
+	if (isys->iwake_watermark_enabled == enable)
 		return;
-	}
 
 	ret = set_iwake_register(isys, GDA_ENABLE_IWAKE_INDEX, enable);
 	if (!ret)
-		iwake_watermark->iwake_enabled = enable;
-
-	mutex_unlock(&iwake_watermark->mutex);
+		isys->iwake_watermark_enabled = enable;
 }
 
 void ipu6_isys_update_watermark_setting(struct ipu6_isys *isys)
@@ -580,7 +580,8 @@ void ipu6_isys_update_watermark_setting(struct ipu6_isys *isys)
 		did = calc_fill_time_us * DEFAULT_DID_RATIO / 100;
 		ltr_did_type = LTR_ENHANNCE_IWAKE;
 	} else {
-		get_lut_ltrdid(isys, &ltrdid);
+		ltrdid.lut_ltr.value = LTR_DEFAULT_VALUE;
+		ltrdid.lut_fill_time.value = FILL_TIME_DEFAULT_VALUE;
 
 		if (calc_fill_time_us <= ltrdid.lut_fill_time.bits.th0)
 			ltr = 0;
@@ -635,30 +636,6 @@ void ipu6_isys_update_watermark_setting(struct ipu6_isys *isys)
 	       isys->adev->isp->base + REG_PKGC_PMON_CFG);
 	writel(VAL_PKGC_PMON_CFG_START,
 	       isys->adev->isp->base + REG_PKGC_PMON_CFG);
-}
-
-static void isys_iwake_watermark_init(struct ipu6_isys *isys)
-{
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
-
-	INIT_LIST_HEAD(&iwake_watermark->video_list);
-	mutex_init(&iwake_watermark->mutex);
-
-	iwake_watermark->ltrdid.lut_ltr.value = 0;
-	iwake_watermark->isys = isys;
-	iwake_watermark->iwake_enabled = false;
-	iwake_watermark->force_iwake_disable = false;
-}
-
-static void isys_iwake_watermark_cleanup(struct ipu6_isys *isys)
-{
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
-
-	mutex_lock(&iwake_watermark->mutex);
-	list_del(&iwake_watermark->video_list);
-	mutex_unlock(&iwake_watermark->mutex);
-
-	mutex_destroy(&iwake_watermark->mutex);
 }
 
 /* The .bound() notifier callback when a match is found */
@@ -1094,8 +1071,6 @@ static int isys_probe(struct auxiliary_device *auxdev,
 	if (ret < 0)
 		goto out_remove_pkg_dir_shared_buffer;
 
-	isys_iwake_watermark_init(isys);
-
 	if (is_ipu6se(adev->isp->hw_ver))
 		isys->phy_set_power = ipu6_isys_jsl_phy_set_power;
 	else if (is_ipu6ep_mtl(adev->isp->hw_ver))
@@ -1158,7 +1133,6 @@ static void isys_remove(struct auxiliary_device *auxdev)
 	for (i = 0; i < IPU6_ISYS_MAX_STREAMS; i++)
 		mutex_destroy(&isys->streams[i].mutex);
 
-	isys_iwake_watermark_cleanup(isys);
 	mutex_destroy(&isys->stream_mutex);
 	mutex_destroy(&isys->mutex);
 }
