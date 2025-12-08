@@ -209,7 +209,8 @@ static int isys_csi2_create_media_links(struct ipu6_isys *isys)
 			struct ipu6_isys_video *av = &isys->csi2[i].av[j];
 
 			ret = media_create_pad_link(sd, CSI2_PAD_SRC + j,
-						    &av->vdev.entity, 0, 0);
+						    &av->vdev.entity, 0,
+						    MEDIA_LNK_FL_VALIDATE_LATE);
 			if (ret) {
 				dev_err(dev, "CSI2 can't create link\n");
 				return ret;
