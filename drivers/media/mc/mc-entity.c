@@ -777,7 +777,7 @@ static int
 __media_pipeline_validate_one(struct media_pad *origin,
 			      struct media_pipeline *pipe,
 			      struct media_pad *pad, struct media_link *link,
-			      bool *has_enabled_link)
+			      bool *has_enabled_link, bool skip_validation)
 {
 	struct media_device *mdev = origin->graph_obj.mdev;
 	struct media_entity *entity = pad->entity;
@@ -786,6 +786,9 @@ __media_pipeline_validate_one(struct media_pad *origin,
 	/* Record if the pad has links and enabled links. */
 	if (link->flags & MEDIA_LNK_FL_ENABLED && has_enabled_link)
 		*has_enabled_link = true;
+
+	if (skip_validation)
+		return 0;
 
 	/*
 	 * Validate the link if it's enabled and has the
@@ -838,7 +841,24 @@ __must_check int __media_pipeline_start(struct media_pad *origin,
 	 * valid, so just increase the start count.
 	 */
 	if (pipe->start_count) {
+		struct media_link *link;
+
+		link = __media_entity_next_link(origin->entity, NULL,
+						MEDIA_LNK_FL_DATA_LINK);
+		if (link && link->flags & MEDIA_LNK_FL_VALIDATE_LATE) {
+			dev_dbg(mdev->dev,
+				"Validating pad '%s':%u late\n",
+				origin->entity->name, origin->index);
+
+			ret = __media_pipeline_validate_one(link->sink, pipe,
+							    link->sink, link,
+							    NULL, false);
+			if (ret)
+				return ret;
+		}
+
 		pipe->start_count++;
+
 		return 0;
 	}
 
@@ -886,9 +906,16 @@ __must_check int __media_pipeline_start(struct media_pad *origin,
 			if (link->sink != pad && link->source != pad)
 				continue;
 
+			/* Skip late-validated links not connected to origin. */
+			bool skip_validation =
+				link->flags & MEDIA_LNK_FL_VALIDATE_LATE &&
+				(link->sink == origin ||
+				 link->source == origin);
+
 			ret = __media_pipeline_validate_one(origin, pipe,
 							    origin, link,
-							    &has_enabled_link);
+							    &has_enabled_link,
+							    skip_validation);
 			if (ret)
 				return ret;
 		}
@@ -1171,6 +1198,33 @@ media_create_pad_link(struct media_entity *source, u16 source_pad,
 	if (WARN_ON(source->pads[source_pad].flags & MEDIA_PAD_FL_INTERNAL) ||
 	    WARN_ON(sink->pads[sink_pad].flags & MEDIA_PAD_FL_INTERNAL))
 		return -EINVAL;
+
+	/*
+	 * With the late validate flag, either source or sink shall have exactly
+	 * one pad and no links before this one. Similarly, no links may be
+	 * added to entities with a single pad and an existing late-validated
+	 * link.
+	 */
+	if (flags & MEDIA_LNK_FL_VALIDATE_LATE) {
+		if (!(source->num_pads == 1 && !source->num_links) &&
+		    !(sink->num_pads == 1 && !sink->num_links))
+			return -EINVAL;
+	} else {
+		struct media_entity *entities[] = { source, sink };
+
+		for (unsigned int i = 0; i < ARRAY_SIZE(entities); i++) {
+			if (entities[i]->num_pads != 1)
+				continue;
+
+			struct media_link *__link =
+				__media_entity_next_link(entities[i], NULL,
+							 MEDIA_LNK_FL_DATA_LINK);
+
+			if (__link &&
+			    __link->flags & MEDIA_LNK_FL_VALIDATE_LATE)
+				return -EINVAL;
+		}
+	}
 
 	link = media_add_link(&source->links);
 	if (link == NULL)
