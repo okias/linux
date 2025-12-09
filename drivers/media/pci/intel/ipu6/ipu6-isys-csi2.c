@@ -381,6 +381,10 @@ static bool ipu6_isys_csi2_streaming_change(struct ipu6_isys_subdev *asd,
 		return true;
 	}
 
+	dev_dbg(asd->sd.dev, "not setting streaming %s %s (%u/%u)\n",
+		str_enabled_disabled(enable), enable ? "yet" : "anymore",
+		nodes_streaming, streams_enabled);
+
 	return false;
 }
 
@@ -403,6 +407,11 @@ static int ipu6_isys_csi2_enable_streams(struct v4l2_subdev *sd,
 
 	list_add(&av->csi2_entry, &csi2->av_head);
 
+	sink_streams =
+		v4l2_subdev_state_xlate_streams(state, pad, CSI2_PAD_SINK,
+						&streams_mask);
+	csi2->stream_ids |= sink_streams;
+
 	if (!ipu6_isys_csi2_streaming_change(asd, state, pad, true))
 		return 0;
 
@@ -412,13 +421,6 @@ static int ipu6_isys_csi2_enable_streams(struct v4l2_subdev *sd,
 		goto err_del_av;
 	}
 
-	remote_pad = media_pad_remote_pad_first(&sd->entity.pads[CSI2_PAD_SINK]);
-	remote_sd = media_entity_to_v4l2_subdev(remote_pad->entity);
-
-	sink_streams =
-		v4l2_subdev_state_xlate_streams(state, pad, CSI2_PAD_SINK,
-						&streams_mask);
-
 	ret = ipu6_isys_csi2_calc_timing(csi2, &timing, CSI2_ACCINV);
 	if (ret)
 		goto err_stop_stream_firmware;
@@ -427,8 +429,11 @@ static int ipu6_isys_csi2_enable_streams(struct v4l2_subdev *sd,
 	if (ret)
 		goto err_stop_stream_firmware;
 
+	remote_pad = media_pad_remote_pad_first(&sd->entity.pads[CSI2_PAD_SINK]);
+	remote_sd = media_entity_to_v4l2_subdev(remote_pad->entity);
+
 	ret = v4l2_subdev_enable_streams(remote_sd, remote_pad->index,
-					 sink_streams);
+					 csi2->stream_ids);
 	if (ret)
 		goto err_stop_stream_csi2;
 
@@ -444,6 +449,7 @@ err_stop_stream_firmware:
 	ipu6_isys_close_streaming_firmware(av);
 
 err_del_av:
+	csi2->stream_ids &= ~sink_streams;
 	list_del(&av->csi2_entry);
 
 	return ret;
@@ -471,6 +477,8 @@ static int ipu6_isys_csi2_disable_streams(struct v4l2_subdev *sd,
 		v4l2_subdev_state_xlate_streams(state, pad, CSI2_PAD_SINK,
 						&streams_mask);
 
+	csi2->streaming = false;
+
 	remote_pad = media_pad_remote_pad_first(&sd->entity.pads[CSI2_PAD_SINK]);
 	remote_sd = media_entity_to_v4l2_subdev(remote_pad->entity);
 
@@ -478,7 +486,8 @@ static int ipu6_isys_csi2_disable_streams(struct v4l2_subdev *sd,
 
 	ipu6_isys_csi2_set_stream(sd, NULL, 0, false);
 
-	v4l2_subdev_disable_streams(remote_sd, remote_pad->index, sink_streams);
+	v4l2_subdev_disable_streams(remote_sd, remote_pad->index,
+				    csi2->stream_ids);
 
 	ipu6_isys_close_streaming_firmware(av);
 

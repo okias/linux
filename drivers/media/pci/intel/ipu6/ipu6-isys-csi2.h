@@ -45,6 +45,7 @@ struct ipu6_isys_csi2 {
 	unsigned int nlanes;
 	unsigned int port;
 	bool streaming;
+	u64 stream_ids;
 };
 
 struct ipu6_isys_csi2_timing {
