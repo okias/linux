@@ -432,6 +432,8 @@ static int ipu6_isys_csi2_enable_streams(struct v4l2_subdev *sd,
 	if (ret)
 		goto err_stop_stream_csi2;
 
+	csi2->streaming = true;
+
 	return 0;
 
 err_stop_stream_csi2:
@@ -452,6 +454,7 @@ static int ipu6_isys_csi2_disable_streams(struct v4l2_subdev *sd,
 					  u32 pad, u64 streams_mask)
 {
 	struct ipu6_isys_subdev *asd = to_ipu6_isys_subdev(sd);
+	struct ipu6_isys_csi2 *csi2 = ipu6_isys_subdev_to_csi2(asd);
 	struct media_pad *remote_pad,
 		*vdev_pad = media_pad_remote_pad_unique(&sd->entity.pads[pad]);
 	struct ipu6_isys_video *av =
@@ -478,6 +481,8 @@ static int ipu6_isys_csi2_disable_streams(struct v4l2_subdev *sd,
 	v4l2_subdev_disable_streams(remote_sd, remote_pad->index, sink_streams);
 
 	ipu6_isys_close_streaming_firmware(av);
+
+	csi2->streaming = false;
 
 out_del_csi2_entry:
 	list_del(&av->csi2_entry);

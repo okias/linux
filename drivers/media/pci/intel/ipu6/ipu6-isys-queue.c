@@ -299,6 +299,9 @@ static int ipu6_isys_stream_start(struct ipu6_isys_video *av)
 	if (ret)
 		return ret;
 
+	if (!av->csi2->streaming)
+		return 0;
+
 	do {
 		struct ipu6_fw_isys_frame_buff_set_abi *buf = NULL;
 		struct isys_fw_msgs *msg;
@@ -346,6 +349,7 @@ static void buf_queue(struct vb2_buffer *vb)
 	struct device *dev = &av->isys->adev->auxdev.dev;
 	struct ipu6_fw_isys_frame_buff_set_abi *buf = NULL;
 	struct ipu6_isys_stream *stream = av->stream;
+	struct ipu6_isys_csi2 *csi2;
 	struct ipu6_isys_buffer_list bl;
 	struct isys_fw_msgs *msg;
 	unsigned long flags;
@@ -369,7 +373,8 @@ static void buf_queue(struct vb2_buffer *vb)
 
 	mutex_lock(&stream->mutex);
 
-	if (stream->nr_streaming != stream->nr_queues) {
+	csi2 = ipu6_isys_subdev_to_csi2(stream->asd);
+	if (!csi2->streaming) {
 		dev_dbg(dev, "not streaming yet, adding to incoming\n");
 		goto out;
 	}
@@ -532,7 +537,8 @@ static int start_streaming(struct vb2_queue *q, unsigned int count)
 		ipu6_isys_get_isys_format(ipu6_isys_get_format(av), 0);
 	struct ipu6_isys_stream *stream;
 	struct media_pad *source_pad, *remote_pad;
-	int nr_queues, ret;
+	bool first;
+	int ret;
 
 	dev_dbg(dev, "stream: %s: width %u, height %u, css pixelformat %u\n",
 		av->vdev.name, ipu6_isys_get_frame_width(av),
@@ -552,11 +558,12 @@ static int start_streaming(struct vb2_queue *q, unsigned int count)
 		goto out_return_buffers;
 	}
 
-	ret = ipu6_isys_setup_video(av, remote_pad, source_pad, &nr_queues);
+	ret = ipu6_isys_setup_video(av, remote_pad, source_pad);
 	if (ret < 0) {
 		dev_dbg(dev, "failed to setup video\n");
 		goto out_return_buffers;
 	}
+	first = ret;
 
 	ret = ipu6_isys_link_fmt_validate(aq);
 	if (ret) {
@@ -572,16 +579,11 @@ static int start_streaming(struct vb2_queue *q, unsigned int count)
 
 	stream = av->stream;
 	mutex_lock(&stream->mutex);
-	if (!stream->nr_streaming) {
-		ret = ipu6_isys_video_prepare_stream(av, source_pad->entity,
-						     nr_queues);
+	if (first) {
+		ret = ipu6_isys_video_prepare_stream(av, source_pad->entity);
 		if (ret)
 			goto out_fw_close;
 	}
-
-	stream->nr_streaming++;
-	dev_dbg(dev, "queue %u of %u\n", stream->nr_streaming,
-		stream->nr_queues);
 
 	list_add(&aq->node, &stream->queues);
 	ipu6_isys_configure_stream_watermark(av, source_pad->entity);
@@ -598,7 +600,6 @@ static int start_streaming(struct vb2_queue *q, unsigned int count)
 out_stream_start:
 	ipu6_isys_update_stream_watermark(av, false);
 	list_del(&aq->node);
-	stream->nr_streaming--;
 
 out_fw_close:
 	mutex_unlock(&stream->mutex);
@@ -628,7 +629,6 @@ static void stop_streaming(struct vb2_queue *q)
 	list_del(&aq->node);
 	mutex_unlock(&av->isys->stream_mutex);
 
-	stream->nr_streaming--;
 	mutex_unlock(&stream->mutex);
 
 	ipu6_isys_stream_cleanup(av);
