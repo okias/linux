@@ -410,6 +410,13 @@
 	status = "okay";
 };
 
+&pmi8998_fg {
+	monitored-battery = <&battery>;
+	power-supplies = <&pmi8998_charger>;
+
+	status = "okay";
+};
+
 &qupv3_id_0 {
 	status = "okay";
 };
