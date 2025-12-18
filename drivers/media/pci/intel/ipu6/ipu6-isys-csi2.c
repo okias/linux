@@ -11,6 +11,7 @@
 #include <linux/err.h>
 #include <linux/io.h>
 #include <linux/minmax.h>
+#include <linux/pm_runtime.h>
 #include <linux/sprintf.h>
 #include <linux/string_choices.h>
 
@@ -486,6 +487,10 @@ static int ipu6_isys_csi2_enable_streams(struct v4l2_subdev *sd,
 	if (!ipu6_isys_csi2_streaming_change(asd, state, pad, true))
 		return 0;
 
+	ret = pm_runtime_resume_and_get(sd->dev);
+	if (ret < 0)
+		goto err_del_av;
+
 	remote_pad = media_pad_remote_pad_first(&sd->entity.pads[CSI2_PAD_SINK]);
 	remote_sd = media_entity_to_v4l2_subdev(remote_pad->entity);
 
@@ -493,12 +498,12 @@ static int ipu6_isys_csi2_enable_streams(struct v4l2_subdev *sd,
 
 	ret = v4l2_subdev_get_frame_desc(remote_sd, remote_pad->index, &desc);
 	if (ret)
-		goto err_del_av;
+		goto err_runtime_pm_put;
 
 	ret = ipu6_isys_alloc_start_streams_firmware(csi2, state, &desc);
 	if (ret) {
 		dev_err(sd->dev, "start stream of firmware failed\n");
-		goto err_del_av;
+		goto err_runtime_pm_put;
 	}
 
 	ret = ipu6_isys_csi2_calc_timing(csi2, &timing, CSI2_ACCINV);
@@ -531,6 +536,9 @@ err_del_av:
 	ipu6_isys_csi2_streaming_change(asd, state, pad, false);
 	csi2->stream_ids &= ~sink_streams;
 	list_del(&av->csi2_entry);
+
+err_runtime_pm_put:
+	pm_runtime_put(sd->dev);
 
 	return ret;
 }
@@ -575,6 +583,8 @@ static int ipu6_isys_csi2_disable_streams(struct v4l2_subdev *sd,
 	ipu6_isys_free_streams_firmware(csi2);
 
 	ipu6_isys_csi2_clear_watermark(csi2);
+
+	pm_runtime_put(sd->dev);
 
 out_del_csi2_entry:
 	list_del(&av->csi2_entry);
