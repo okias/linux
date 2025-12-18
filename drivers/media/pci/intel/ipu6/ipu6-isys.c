@@ -345,12 +345,11 @@ static irqreturn_t isys_isr(struct ipu6_bus_device *adev)
 	void __iomem *base = isys->pdata->base;
 	u32 status_sw, status_csi;
 	u32 ctrl0_status, ctrl0_clear;
+	int pm_status;
 
-	spin_lock(&isys->power_lock);
-	if (!isys->power) {
-		spin_unlock(&isys->power_lock);
-		return IRQ_NONE;
-	}
+	pm_status = pm_runtime_get_if_active(&adev->auxdev.dev);
+	if (!pm_status)
+		return 0;
 
 	ctrl0_status = isys->pdata->ipdata->csi2.ctrl0_irq_status;
 	ctrl0_clear = isys->pdata->ipdata->csi2.ctrl0_irq_clear;
@@ -395,7 +394,8 @@ static irqreturn_t isys_isr(struct ipu6_bus_device *adev)
 
 	writel(ISYS_UNISPART_IRQS, base + IPU6_REG_ISYS_UNISPART_IRQ_MASK);
 
-	spin_unlock(&isys->power_lock);
+	if (pm_status > 0)
+		pm_runtime_put(&adev->auxdev.dev);
 
 	return IRQ_HANDLED;
 }
@@ -801,7 +801,6 @@ static int isys_runtime_pm_resume(struct device *dev)
 	struct ipu6_isys *isys = ipu6_bus_get_drvdata(adev);
 	const struct ipu6_isys_internal_pdata *ipdata = isys->pdata->ipdata;
 	struct ipu6_device *isp = adev->isp;
-	unsigned long flags;
 	int ret;
 
 	ret = ipu6_mmu_hw_init(adev->mmu);
@@ -813,10 +812,6 @@ static int isys_runtime_pm_resume(struct device *dev)
 	ret = ipu6_buttress_start_tsc_sync(isp);
 	if (ret)
 		goto err_mmu_hw_cleanup;
-
-	spin_lock_irqsave(&isys->power_lock, flags);
-	isys->power = 1;
-	spin_unlock_irqrestore(&isys->power_lock, flags);
 
 	isys_setup_hw(isys);
 
@@ -845,10 +840,6 @@ static int isys_runtime_pm_resume(struct device *dev)
 	if (!ret)
 		return 0;
 
-	spin_lock_irqsave(&isys->power_lock, flags);
-	isys->power = 0;
-	spin_unlock_irqrestore(&isys->power_lock, flags);
-
 	isys->phy_termcal_val = 0;
 	cpu_latency_qos_update_request(&isys->pm_qos, PM_QOS_DEFAULT_VALUE);
 
@@ -864,7 +855,6 @@ static int isys_runtime_pm_suspend(struct device *dev)
 {
 	struct ipu6_bus_device *adev = to_ipu6_bus_device(dev);
 	struct ipu6_isys *isys = dev_get_drvdata(dev);
-	unsigned long flags;
 	int ret = 0;
 
 	ipu6_fw_isys_close(isys);
@@ -872,10 +862,6 @@ static int isys_runtime_pm_suspend(struct device *dev)
 		dev_warn(&isys->adev->auxdev.dev, "failed to close fw isys\n");
 		ret = -EIO;
 	}
-
-	spin_lock_irqsave(&isys->power_lock, flags);
-	isys->power = 0;
-	spin_unlock_irqrestore(&isys->power_lock, flags);
 
 	isys->phy_termcal_val = 0;
 	cpu_latency_qos_update_request(&isys->pm_qos, PM_QOS_DEFAULT_VALUE);
@@ -1053,8 +1039,6 @@ static int isys_probe(struct auxiliary_device *auxdev,
 	isys->sensor_type = isys->pdata->ipdata->sensor_type_start;
 
 	spin_lock_init(&isys->streams_lock);
-	spin_lock_init(&isys->power_lock);
-	isys->power = 0;
 	isys->phy_termcal_val = 0;
 
 	mutex_init(&isys->mutex);
@@ -1192,9 +1176,6 @@ static int isys_isr_one(struct ipu6_bus_device *adev)
 	struct ipu6_isys_csi2 *csi2 = NULL;
 	u32 index;
 	u64 ts;
-
-	if (!isys->fwcom)
-		return 1;
 
 	resp = ipu6_fw_isys_get_resp(isys->fwcom, IPU6_BASE_MSG_RECV_QUEUES);
 	if (!resp)
