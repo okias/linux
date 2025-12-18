@@ -714,7 +714,7 @@ static int ipu6_isys_close_streaming_firmware(struct ipu6_isys_stream *stream,
 	else
 		dev_dbg(dev, "close stream: complete\n");
 
-	scoped_guard(spinlock_irqsave, &stream->isys->power_lock) {
+	scoped_guard(spinlock_irqsave, &stream->isys->streams_lock) {
 		stream->isys->streams_by_handle[stream->stream_handle] = NULL;
 		csi2->streams_by_vc[stream->vc] = NULL;
 	}
@@ -794,8 +794,6 @@ int ipu6_isys_alloc_start_streams_firmware(struct ipu6_isys_csi2 *csi2,
 				break;
 
 		if (list_entry_is_head(stream, &csi2->streams, csi2_entry)) {
-			unsigned long flags;
-
 			stream = kzalloc(sizeof(*stream), GFP_KERNEL);
 			if (!stream) {
 				ret = -ENOMEM;
@@ -821,7 +819,7 @@ int ipu6_isys_alloc_start_streams_firmware(struct ipu6_isys_csi2 *csi2,
 			stream->asd = &csi2->asd;
 			stream->vc = entry->bus.csi2.vc;
 
-			scoped_guard(spinlock_irqsave, &stream->isys->power_lock) {
+			scoped_guard(spinlock_irqsave, &stream->isys->streams_lock) {
 				stream->isys->streams_by_handle[stream->stream_handle] =
 					stream;
 				csi2->streams_by_vc[stream->vc] = stream;

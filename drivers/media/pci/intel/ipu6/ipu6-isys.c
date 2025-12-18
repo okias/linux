@@ -311,10 +311,8 @@ static void isys_setup_hw(struct ipu6_isys *isys)
 
 static void ipu6_isys_csi2_isr(struct ipu6_isys_csi2 *csi2)
 {
-	struct ipu6_isys_stream *stream;
 	unsigned int i;
 	u32 status;
-	int source;
 
 	ipu6_isys_register_errors(csi2);
 
@@ -324,17 +322,18 @@ static void ipu6_isys_csi2_isr(struct ipu6_isys_csi2 *csi2)
 	writel(status, csi2->base + CSI_PORT_REG_BASE_IRQ_CSI_SYNC +
 	       CSI_PORT_REG_BASE_IRQ_CLEAR_OFFSET);
 
-	source = csi2->asd.source;
-	for (i = 0; i < NR_OF_CSI2_VC; i++) {
-		if (status & IPU_CSI_RX_IRQ_FS_VC(i)) {
-			stream = csi2->streams_by_vc[i];
-			if (stream)
-				ipu6_isys_csi2_sof_event_by_stream(stream);
-		}
+	scoped_guard(spinlock, &csi2->isys->streams_lock) {
+		for (i = 0; i < NR_OF_CSI2_VC; i++) {
+			struct ipu6_isys_stream *stream =
+				csi2->streams_by_vc[i];
 
-		if (status & IPU_CSI_RX_IRQ_FE_VC(i)) {
-			stream = csi2->streams_by_vc[i];
-			if (stream)
+			if (!stream)
+				continue;
+
+			if (status & IPU_CSI_RX_IRQ_FS_VC(i))
+				ipu6_isys_csi2_sof_event_by_stream(stream);
+
+			if (status & IPU_CSI_RX_IRQ_FE_VC(i))
 				ipu6_isys_csi2_eof_event_by_stream(stream);
 		}
 	}
@@ -1185,6 +1184,8 @@ static int isys_isr_one(struct ipu6_bus_device *adev)
 			resp->stream_handle);
 		goto leave;
 	}
+
+	guard(spinlock_irqsave)(&isys->streams_lock);
 
 	stream = resp->stream_handle < IPU6_ISYS_MAX_STREAMS ?
 		isys->streams_by_handle[resp->stream_handle] : NULL;
