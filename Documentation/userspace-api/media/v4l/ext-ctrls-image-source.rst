@@ -93,3 +93,123 @@ Image Source Control IDs
     representing a gain of exactly 1.0. For example, if this default value
     is reported as being (say) 128, then a value of 192 would represent
     a gain of exactly 1.5.
+
+.. _image-source-control-cfa-pattern:
+
+``V4L2_CID_CFA_PATTERN (integer)``
+    This control determines the color components and native pixel order in the
+    sensor's CFA (Color Filter Array) when used in conjunction with
+    :ref:`generic raw mbus codes MEDIA_BUS_FMT_RAW_x (where 'x' is the bit
+    depth) <v4l2-mbus-pixelcode-generic-raw>` pixelcodes. The native pixel
+    order is constant for a given device, it is not affected by cropping or
+    flipping.
+
+    This control may only be used on V4L2 sub-devices.
+
+    This is a read-only control.
+
+    Available patterns:
+
+.. flat-table:: V4L2 Color Filter Array Patterns
+    :header-rows:  1
+    :stub-columns: 0
+    :widths:       1 2 1
+
+    * - Macro name
+      - Synopsis
+      - Value
+    * - V4L2_CFA_PATTERN_GRBG
+      - Bayer pattern (2x2 macroblocks). Each macroblock has a green filter in
+        the top-left and bottom-right pixels, a red filter in the top-right
+        pixel, and a blue filter in the bottom-left pixel.
+      - 0
+    * - V4L2_CFA_PATTERN_RGGB
+      - Bayer pattern (2x2 macroblocks). Each macroblock has a green filter in
+        the top-right and bottom-left pixels, a red filter in the top-left
+        pixel, and a blue filter in the bottom-right pixel.
+      - 1
+    * - V4L2_CFA_PATTERN_BGGR
+      - Bayer pattern (2x2 macroblocks). Each macroblock has a green filter in
+        the top-right and bottom-left pixels, a blue filter in the top-left
+        pixel, and a red filter in the bottom-right pixel.
+      - 2
+    * - V4L2_CFA_PATTERN_GBRG
+      - Bayer pattern (2x2 macroblocks). Each macroblock has a green filter in
+        the top-left and bottom-right pixels, a blue filter in the top-right
+        pixel, and a red filter in the bottom-left pixel.
+      - 3
+
+.. _image-source-control-cfa-pattern-flip:
+
+``V4L2_CID_CFA_PATTERN_FLIP (bitmask)``
+    Whether the horizontal or vertical flipping controls (V4L2_CID_HFLIP and
+    V4L2_CID_VFLIP) have an effect on the pixel order of the output color
+    pattern. Macros ``V4L2_CFA_PATTERN_FLIP_HORIZONTAL`` and
+    ``V4L2_CFA_PATTERN_FLIP_VERTICAL`` define bitmasks for both bits. If either
+    horizontal or vertical bit is set, the readout pattern order is that of the
+    reversed readout. ``V4L2_CFA_PATTERN_FLIP_BOTH`` for setting both
+    ``V4L2_CFA_PATTERN_FLIP_HORIZONTAL`` and ``V4L2_CFA_PATTERN_FLIP_VERTICAL``
+    is provided as well.
+
+.. _image_source_control_metadata_layout:
+
+``V4L2_CID_METADATA_LAYOUT (integer)``
+    The metadata layout control defines the metadata layout on the device's data
+    interface for metadata streams. The control is used in conjunction with
+    :ref:`generic metadata formats <media-bus-format-generic-meta>` formats to
+    specify the layout of the data.
+
+.. flat-table:: V4L2 metadata layouts
+    :header-rows:  1
+    :stub-columns: 0
+    :widths:       1 2 1
+
+    * - Macro name
+      - Synopsis
+      - Value
+    * - V4L2_METADATA_LAYOUT_CCS
+      - :ref:`CCS embedded data <media-metadata-layout-ccs>`
+      - 1
+    * - V4L2_METADATA_LAYOUT_OV2740
+      - :ref:`OV2740 embedded data <media-metadata-layout-ov2740>`
+      - 2
+
+.. _image_source_control_binning_factors:
+
+``V4L2_CID_BINNING_FACTORS (integer menu)``
+
+    Horizontal and vertical binning factors. Binning combines several
+    horizontal, vertical or both pixel values into a single pixel. It is a way
+    to scale an image. Binning typically produces fairly good quality output.
+
+    Determines both horizontal and vertical binning factors for a camera
+    sensor. The values are encoded in the following way:
+
+.. flat-table::
+    :header-rows:  1
+    :stub-columns: 0
+
+    * - Bits
+      - Synopsis
+    * - 48--63
+      - Horizontal binning numerator.
+    * - 32--47
+      - Horizontal binning denominator.
+    * - 16--31
+      - Vertical binning numerator.
+    * - 0--15
+      - Vertical binning denominator.
+
+For instance, a value of ``0x0001000300020003`` indicates binning by 3
+(horizontally) * 3/2 (vertically).
+
+.. _image_source_control_subsampling:
+
+``V4L2_CID_SUBSAMPLING_HORIZONTAL`` and ``V4L2_CID_SUBSAMPLING_VERTICAL``
+(integer)
+
+    Horizontal and vertical subsampling factors.
+
+    Sub-sampling is used to downscale an image, horizontally and vertically, by
+    discarding a part of the image data. Typically sub-sampling produces lower
+    quality images than binning.

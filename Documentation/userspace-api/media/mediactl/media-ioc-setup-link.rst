@@ -49,6 +49,10 @@ Only links marked with the ``DYNAMIC`` link flag can be enabled/disabled
 while streaming media data. Attempting to enable or disable a streaming
 non-dynamic link will return an ``EBUSY`` error code.
 
+The ``VALIDATE_LATE`` flag is used to signal that the validation of the link may
+be delayed until actual hardware operation even if the rest of the pipeline
+would be validated at an earlier point of time.
+
 If the specified link can't be found the driver returns with an ``EINVAL``
 error code.
 

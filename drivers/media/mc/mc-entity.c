@@ -209,11 +209,16 @@ int media_entity_pads_init(struct media_entity *entity, u16 num_pads,
 		mutex_lock(&mdev->graph_mutex);
 
 	media_entity_for_each_pad(entity, iter) {
+		const u32 pad_flags = iter->flags & (MEDIA_PAD_FL_SINK |
+						     MEDIA_PAD_FL_SOURCE |
+						     MEDIA_PAD_FL_INTERNAL);
+
 		iter->entity = entity;
 		iter->index = i++;
 
-		if (hweight32(iter->flags & (MEDIA_PAD_FL_SINK |
-					     MEDIA_PAD_FL_SOURCE)) != 1) {
+		if (pad_flags != MEDIA_PAD_FL_SINK &&
+		    pad_flags != (MEDIA_PAD_FL_SINK | MEDIA_PAD_FL_INTERNAL) &&
+		    pad_flags != MEDIA_PAD_FL_SOURCE) {
 			ret = -EINVAL;
 			break;
 		}
@@ -768,6 +773,52 @@ done:
 	return ret;
 }
 
+static int
+__media_pipeline_validate_one(struct media_pad *origin,
+			      struct media_pipeline *pipe,
+			      struct media_pad *pad, struct media_link *link,
+			      bool *has_enabled_link, bool skip_validation)
+{
+	struct media_device *mdev = origin->graph_obj.mdev;
+	struct media_entity *entity = pad->entity;
+	int ret;
+
+	/* Record if the pad has links and enabled links. */
+	if (link->flags & MEDIA_LNK_FL_ENABLED && has_enabled_link)
+		*has_enabled_link = true;
+
+	if (skip_validation)
+		return 0;
+
+	/*
+	 * Validate the link if it's enabled and has the
+	 * current pad as its sink.
+	 */
+	if (!(link->flags & MEDIA_LNK_FL_ENABLED))
+		return 0;
+
+	if (link->sink != pad)
+		return 0;
+
+	if (!entity->ops || !entity->ops->link_validate)
+		return 0;
+
+	ret = entity->ops->link_validate(link);
+	if (ret) {
+		dev_dbg(mdev->dev,
+			"Link '%s':%u -> '%s':%u failed validation: %d\n",
+			link->source->entity->name, link->source->index,
+			link->sink->entity->name, link->sink->index, ret);
+		return ret;
+	}
+
+	dev_dbg(mdev->dev, "Link '%s':%u -> '%s':%u is valid\n",
+		link->source->entity->name, link->source->index,
+		link->sink->entity->name, link->sink->index);
+
+	return 0;
+}
+
 __must_check int __media_pipeline_start(struct media_pad *origin,
 					struct media_pipeline *pipe)
 {
@@ -790,7 +841,24 @@ __must_check int __media_pipeline_start(struct media_pad *origin,
 	 * valid, so just increase the start count.
 	 */
 	if (pipe->start_count) {
+		struct media_link *link;
+
+		link = __media_entity_next_link(origin->entity, NULL,
+						MEDIA_LNK_FL_DATA_LINK);
+		if (link && link->flags & MEDIA_LNK_FL_VALIDATE_LATE) {
+			dev_dbg(mdev->dev,
+				"Validating pad '%s':%u late\n",
+				origin->entity->name, origin->index);
+
+			ret = __media_pipeline_validate_one(link->sink, pipe,
+							    link->sink, link,
+							    NULL, false);
+			if (ret)
+				return ret;
+		}
+
 		pipe->start_count++;
+
 		return 0;
 	}
 
@@ -838,40 +906,18 @@ __must_check int __media_pipeline_start(struct media_pad *origin,
 			if (link->sink != pad && link->source != pad)
 				continue;
 
-			/* Record if the pad has links and enabled links. */
-			if (link->flags & MEDIA_LNK_FL_ENABLED)
-				has_enabled_link = true;
+			/* Skip late-validated links not connected to origin. */
+			bool skip_validation =
+				link->flags & MEDIA_LNK_FL_VALIDATE_LATE &&
+				(link->sink == origin ||
+				 link->source == origin);
 
-			/*
-			 * Validate the link if it's enabled and has the
-			 * current pad as its sink.
-			 */
-			if (!(link->flags & MEDIA_LNK_FL_ENABLED))
-				continue;
-
-			if (link->sink != pad)
-				continue;
-
-			if (!entity->ops || !entity->ops->link_validate)
-				continue;
-
-			ret = entity->ops->link_validate(link);
-			if (ret) {
-				dev_dbg(mdev->dev,
-					"Link '%s':%u -> '%s':%u failed validation: %d\n",
-					link->source->entity->name,
-					link->source->index,
-					link->sink->entity->name,
-					link->sink->index, ret);
-				goto error;
-			}
-
-			dev_dbg(mdev->dev,
-				"Link '%s':%u -> '%s':%u is valid\n",
-				link->source->entity->name,
-				link->source->index,
-				link->sink->entity->name,
-				link->sink->index);
+			ret = __media_pipeline_validate_one(origin, pipe,
+							    origin, link,
+							    &has_enabled_link,
+							    skip_validation);
+			if (ret)
+				return ret;
 		}
 
 		/*
@@ -1118,7 +1164,8 @@ int media_get_pad_index(struct media_entity *entity, u32 pad_type,
 
 	for (i = 0; i < entity->num_pads; i++) {
 		if ((entity->pads[i].flags &
-		     (MEDIA_PAD_FL_SINK | MEDIA_PAD_FL_SOURCE)) != pad_type)
+		     (MEDIA_PAD_FL_SINK | MEDIA_PAD_FL_SOURCE |
+		      MEDIA_PAD_FL_INTERNAL)) != pad_type)
 			continue;
 
 		if (entity->pads[i].sig_type == sig_type)
@@ -1148,6 +1195,36 @@ media_create_pad_link(struct media_entity *source, u16 source_pad,
 		return -EINVAL;
 	if (WARN_ON(!(sink->pads[sink_pad].flags & MEDIA_PAD_FL_SINK)))
 		return -EINVAL;
+	if (WARN_ON(source->pads[source_pad].flags & MEDIA_PAD_FL_INTERNAL) ||
+	    WARN_ON(sink->pads[sink_pad].flags & MEDIA_PAD_FL_INTERNAL))
+		return -EINVAL;
+
+	/*
+	 * With the late validate flag, either source or sink shall have exactly
+	 * one pad and no links before this one. Similarly, no links may be
+	 * added to entities with a single pad and an existing late-validated
+	 * link.
+	 */
+	if (flags & MEDIA_LNK_FL_VALIDATE_LATE) {
+		if (!(source->num_pads == 1 && !source->num_links) &&
+		    !(sink->num_pads == 1 && !sink->num_links))
+			return -EINVAL;
+	} else {
+		struct media_entity *entities[] = { source, sink };
+
+		for (unsigned int i = 0; i < ARRAY_SIZE(entities); i++) {
+			if (entities[i]->num_pads != 1)
+				continue;
+
+			struct media_link *__link =
+				__media_entity_next_link(entities[i], NULL,
+							 MEDIA_LNK_FL_DATA_LINK);
+
+			if (__link &&
+			    __link->flags & MEDIA_LNK_FL_VALIDATE_LATE)
+				return -EINVAL;
+		}
+	}
 
 	link = media_add_link(&source->links);
 	if (link == NULL)
@@ -1310,16 +1387,12 @@ static int __media_entity_setup_link_notify(struct media_link *link, u32 flags)
 
 int __media_entity_setup_link(struct media_link *link, u32 flags)
 {
-	const u32 mask = MEDIA_LNK_FL_ENABLED;
+	const u32 settable_flags = MEDIA_LNK_FL_ENABLED;
 	struct media_device *mdev;
 	struct media_pad *source, *sink;
 	int ret = -EBUSY;
 
 	if (link == NULL)
-		return -EINVAL;
-
-	/* The non-modifiable link flags must not be modified. */
-	if ((link->flags & ~mask) != (flags & ~mask))
 		return -EINVAL;
 
 	if (link->flags & MEDIA_LNK_FL_IMMUTABLE)
@@ -1334,6 +1407,10 @@ int __media_entity_setup_link(struct media_link *link, u32 flags)
 	if (!(link->flags & MEDIA_LNK_FL_DYNAMIC) &&
 	    (media_pad_is_streaming(source) || media_pad_is_streaming(sink)))
 		return -EBUSY;
+
+	/* Only allow changing user-settable flags. */
+	flags &= settable_flags;
+	flags |= link->flags & ~settable_flags;
 
 	mdev = source->graph_obj.mdev;
 

@@ -20,6 +20,7 @@
 #include <linux/version.h>
 #include <linux/videodev2.h>
 
+#include <media/mipi-csi2.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-event.h>
@@ -49,15 +50,6 @@ struct v4l2_subdev_stream_config {
 	struct v4l2_rect compose;
 	struct v4l2_fract interval;
 };
-
-#if defined(CONFIG_VIDEO_V4L2_SUBDEV_API)
-/*
- * The Streams API is an experimental feature. To use the Streams API, set
- * 'v4l2_subdev_enable_streams_api' to 1 below.
- */
-
-static bool v4l2_subdev_enable_streams_api;
-#endif
 
 /*
  * Maximum stream ID is 63 for now, as we use u64 bitmask to represent a set
@@ -629,6 +621,22 @@ subdev_ioctl_get_state(struct v4l2_subdev *sd, struct v4l2_subdev_fh *subdev_fh,
 			     v4l2_subdev_get_unlocked_active_state(sd);
 }
 
+static void subdev_copy_fix_routes(struct v4l2_subdev_routing *routing,
+				   const struct v4l2_subdev_route *src,
+				   u32 copy_routes, u32 num_routes)
+{
+	struct v4l2_subdev_route *routes =
+		(struct v4l2_subdev_route *)(uintptr_t)routing->routes;
+
+	for (u32 i = 0; i < copy_routes; i++) {
+		routes[i] = src[i];
+		if (routes[i].flags & V4L2_SUBDEV_ROUTE_FL_IMMUTABLE)
+			routes[i].flags |= V4L2_SUBDEV_ROUTE_FL_STATIC;
+	}
+
+	routing->num_routes = num_routes;
+}
+
 static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg,
 			    struct v4l2_subdev_state *state)
 {
@@ -641,13 +649,6 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg,
 	bool client_supports_streams = subdev_fh->client_caps &
 				       V4L2_SUBDEV_CLIENT_CAP_STREAMS;
 	int rval;
-
-	/*
-	 * If the streams API is not enabled, remove V4L2_SUBDEV_CAP_STREAMS.
-	 * Remove this when the API is no longer experimental.
-	 */
-	if (!v4l2_subdev_enable_streams_api)
-		streams_subdev = false;
 
 	switch (cmd) {
 	case VIDIOC_SUBDEV_QUERYCAP: {
@@ -1000,23 +1001,15 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg,
 
 	case VIDIOC_SUBDEV_G_ROUTING: {
 		struct v4l2_subdev_routing *routing = arg;
-		struct v4l2_subdev_krouting *krouting;
-
-		if (!v4l2_subdev_enable_streams_api)
-			return -ENOIOCTLCMD;
 
 		if (!(sd->flags & V4L2_SUBDEV_FL_STREAMS))
 			return -ENOIOCTLCMD;
 
 		memset(routing->reserved, 0, sizeof(routing->reserved));
 
-		krouting = &state->routing;
-
-		memcpy((struct v4l2_subdev_route *)(uintptr_t)routing->routes,
-		       krouting->routes,
-		       min(krouting->num_routes, routing->len_routes) *
-		       sizeof(*krouting->routes));
-		routing->num_routes = krouting->num_routes;
+		subdev_copy_fix_routes(routing, state->routing.routes,
+				       routing->len_routes,
+				       state->routing.num_routes);
 
 		return 0;
 	}
@@ -1028,9 +1021,6 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg,
 		struct v4l2_subdev_krouting krouting = {};
 		unsigned int num_active_routes = 0;
 		unsigned int i;
-
-		if (!v4l2_subdev_enable_streams_api)
-			return -ENOIOCTLCMD;
 
 		if (!(sd->flags & V4L2_SUBDEV_FL_STREAMS))
 			return -ENOIOCTLCMD;
@@ -1084,11 +1074,9 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg,
 		 * the routing table.
 		 */
 		if (!v4l2_subdev_has_op(sd, pad, set_routing)) {
-			memcpy((struct v4l2_subdev_route *)(uintptr_t)routing->routes,
-			       state->routing.routes,
-			       min(state->routing.num_routes, routing->len_routes) *
-			       sizeof(*state->routing.routes));
-			routing->num_routes = state->routing.num_routes;
+			subdev_copy_fix_routes(routing, state->routing.routes,
+					       routing->len_routes,
+					       state->routing.num_routes);
 
 			return 0;
 		}
@@ -1102,11 +1090,9 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg,
 		if (rval < 0)
 			return rval;
 
-		memcpy((struct v4l2_subdev_route *)(uintptr_t)routing->routes,
-		       state->routing.routes,
-		       min(state->routing.num_routes, routing->len_routes) *
-		       sizeof(*state->routing.routes));
-		routing->num_routes = state->routing.num_routes;
+		subdev_copy_fix_routes(routing, state->routing.routes,
+				       routing->len_routes,
+				       state->routing.num_routes);
 
 		return 0;
 	}
@@ -1121,14 +1107,6 @@ static long subdev_do_ioctl(struct file *file, unsigned int cmd, void *arg,
 
 	case VIDIOC_SUBDEV_S_CLIENT_CAP: {
 		struct v4l2_subdev_client_capability *client_cap = arg;
-
-		/*
-		 * Clear V4L2_SUBDEV_CLIENT_CAP_STREAMS if streams API is not
-		 * enabled. Remove this when streams API is no longer
-		 * experimental.
-		 */
-		if (!v4l2_subdev_enable_streams_api)
-			client_cap->capabilities &= ~V4L2_SUBDEV_CLIENT_CAP_STREAMS;
 
 		/* Filter out unsupported capabilities */
 		client_cap->capabilities &= (V4L2_SUBDEV_CLIENT_CAP_STREAMS |
@@ -2112,7 +2090,7 @@ int v4l2_subdev_routing_validate(struct v4l2_subdev *sd,
 {
 	u32 *remote_pads = NULL;
 	unsigned int i, j;
-	int ret = -EINVAL;
+	int ret = -ENXIO;
 
 	if (disallow & (V4L2_SUBDEV_ROUTING_NO_STREAM_MIX |
 			V4L2_SUBDEV_ROUTING_NO_MULTIPLEXING)) {
@@ -2637,3 +2615,95 @@ void v4l2_subdev_put_privacy_led(struct v4l2_subdev *sd)
 #endif
 }
 EXPORT_SYMBOL_GPL(v4l2_subdev_put_privacy_led);
+
+static int get_mipi_dt_for_mbus(u32 code)
+{
+	switch (code) {
+	case MEDIA_BUS_FMT_BGR888_1X24:
+		return MIPI_CSI2_DT_RGB888;
+	case MEDIA_BUS_FMT_Y8_1X8:
+	case MEDIA_BUS_FMT_SBGGR8_1X8:
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+	case MEDIA_BUS_FMT_SRGGB8_1X8:
+		return MIPI_CSI2_DT_RAW8;
+	case MEDIA_BUS_FMT_SBGGR10_1X10:
+	case MEDIA_BUS_FMT_SGBRG10_1X10:
+	case MEDIA_BUS_FMT_SGRBG10_1X10:
+	case MEDIA_BUS_FMT_SRGGB10_1X10:
+		return MIPI_CSI2_DT_RAW10;
+	case MEDIA_BUS_FMT_SBGGR12_1X12:
+	case MEDIA_BUS_FMT_SGBRG12_1X12:
+	case MEDIA_BUS_FMT_SGRBG12_1X12:
+	case MEDIA_BUS_FMT_SRGGB12_1X12:
+		return MIPI_CSI2_DT_RAW12;
+	case MEDIA_BUS_FMT_SBGGR14_1X14:
+	case MEDIA_BUS_FMT_SGBRG14_1X14:
+	case MEDIA_BUS_FMT_SGRBG14_1X14:
+	case MEDIA_BUS_FMT_SRGGB14_1X14:
+		return MIPI_CSI2_DT_RAW14;
+	case MEDIA_BUS_FMT_SBGGR16_1X16:
+	case MEDIA_BUS_FMT_SGBRG16_1X16:
+	case MEDIA_BUS_FMT_SGRBG16_1X16:
+	case MEDIA_BUS_FMT_SRGGB16_1X16:
+		return MIPI_CSI2_DT_RAW16;
+	case MEDIA_BUS_FMT_SBGGR20_1X20:
+	case MEDIA_BUS_FMT_SGBRG20_1X20:
+	case MEDIA_BUS_FMT_SGRBG20_1X20:
+	case MEDIA_BUS_FMT_SRGGB20_1X20:
+		return MIPI_CSI2_DT_RAW20;
+	default:
+		return -EINVAL;
+	}
+}
+
+int v4l2_subdev_get_frame_desc(struct v4l2_subdev *sd, unsigned int pad,
+			       struct v4l2_mbus_frame_desc *desc)
+{
+	if (v4l2_subdev_has_op(sd, pad, get_frame_desc)) {
+		unsigned int type = desc->type;
+		int ret;
+
+		ret = v4l2_subdev_call(sd, pad, get_frame_desc, pad, desc);
+
+		if (desc->type != type)
+			return -EINVAL;
+
+		return ret;
+	}
+
+	if (desc->type != V4L2_MBUS_FRAME_DESC_TYPE_PARALLEL ||
+	    desc->type != V4L2_MBUS_FRAME_DESC_TYPE_CSI2)
+		return -EINVAL;
+
+	struct v4l2_subdev_state *state;
+	struct v4l2_mbus_framefmt *fmt;
+
+	state = v4l2_subdev_lock_and_get_active_state(sd);
+	if (!state)
+		return -EINVAL;
+
+	fmt = v4l2_subdev_state_get_format(state, pad, 0);
+	if (!fmt)
+		return -EINVAL;
+
+	struct v4l2_mbus_frame_desc_entry entry = {
+		.pixelcode = fmt->code,
+	};
+
+	if (desc->type == V4L2_MBUS_FRAME_DESC_TYPE_CSI2) {
+		int dt;
+
+		dt = get_mipi_dt_for_mbus(fmt->code);
+		if (dt < 0)
+			return dt;
+
+		entry.bus.csi2.dt = dt;
+	}
+
+	desc->entry[0] = entry;
+	desc->num_entries = 1;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(v4l2_subdev_get_frame_desc);

@@ -18,6 +18,8 @@ binning functionality. The sensor drivers belong to two distinct classes, freely
 configurable and register list-based drivers, depending on how the driver
 configures this functionality.
 
+Also see :ref:`media_subdev_config_model_common_raw_sensor`.
+
 Freely configurable camera sensor drivers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -38,6 +40,19 @@ level are independent. How a driver picks such configuration is based on the
 format set on a source pad at the end of the device's internal pipeline.
 
 Most sensor drivers are implemented this way.
+
+V4L2_CID_CFA_PATTERN, raw mbus formats, flipping and cropping
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For raw image data originating from camera sensors, specific :ref:`raw mbus
+codes MEDIA_BUS_FMT_RAW_x (where 'x' is the bit depth)
+<v4l2-mbus-pixelcode-generic-raw>` are used as Color Filter Array (CFA) agnostic
+raw formats. The :ref:`V4L2_CID_CFA_PATTERN <image-source-control-cfa-pattern>`
+control in the same sub-device defines the native CFA pattern of the
+device. Flipping may further affect the readout pattern as indicated by the
+:ref:`V4L2_CID_CFA_PATTERN_FLIP <image-source-control-cfa-pattern-flip>`
+control. Further on, cropping also has an effect on the pattern if cropped
+amount is not divisible by the size of the pattern, horizontally and vertically.
 
 Frame interval configuration
 ----------------------------
@@ -104,3 +119,58 @@ register programming sequences shall initialize the :ref:`V4L2_CID_HFLIP
 values programmed by the register sequences. The default values of these
 controls shall be 0 (disabled). Especially these controls shall not be inverted,
 independently of the sensor's mounting rotation.
+
+Binning and sub-sampling
+------------------------
+
+Binning has traditionally been configured using :ref:`the compose selection
+rectangle <v4l2-selection-targets-table>`. The :ref:`V4L2_CID_BINNING
+<image_source_control_binning_factors>` control is also available for binning
+configuration and users should use it when it's available. Drivers supporting
+the control shall also support the compose rectangle, albeit the rectangle may
+be read-only when the control is present.
+
+Sub-sampling is often supported as part of a camera sensor's binning
+functionality and performed after the binning operation. Sub-sampling typically
+produces quality-wise worse results than binning. Sub-sampling factors are
+independent horizontally and vertically and they are controlled using two
+controls, :ref:`V4L2_CID_SUBSAMPLING_HORIZONTAL and
+V4L2_CID_SUBSAMPLING_VERTICAL <image_source_control_subsampling>`. In
+sub-sampling, the image size before sub-sampling is horizontally and vertically
+divided by the respective sub-sampling factors. Drivers supporting the control shall
+also reflect the sub-sampling configuration in the compose rectangle.
+
+Binning and sub-sampling aren't affected by flipping.
+
+.. _media_using_camera_sensor_drivers_embedded_data:
+
+Embedded data
+-------------
+
+Many sensors, mostly raw sensors, support embedded data which is used to convey
+the sensor configuration for the captured frame back to the host. While CSI-2 is
+the most common data interface used by such sensors, embedded data can be
+available on other interfaces as well.
+
+Embedded data support is indicated by the presence of an internal sink pad (pad
+that has both the :ref:`MEDIA_PAD_FL_SINK <MEDIA-PAD-FL-SINK>` and
+:ref:`MEDIA_PAD_FL_INTERNAL <MEDIA-PAD-FL-INTERNAL>` flags set) with a metadata
+format to model the embedded data stream. If the sub-device driver supports
+disabling embedded data, this can be done by disabling the embedded data route
+via the ``VIDIOC_SUBDEV_S_ROUTING`` IOCTL.
+
+In general, changing the embedded data layout from the driver-configured values
+is not supported. The height of the metadata is device-specific and equal to or
+less than the image width, as configured on the pixel data stream.
+
+CCS and non-CCS embedded data layout
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Embedded data which is fully compliant with CCS definitions uses ``CCS embedded
+data layout <media-metadata-layout-ccs>`` (level 3) for :ref:`the metadata
+layout control <image_source_control_metadata_layout>`. Device-specific embedded
+data compliant with either MIPI CCS embedded data levels 1 or 2 only shall not
+use CCS embedded data mbus code, but may refer to CCS embedded data
+documentation with the level of conformance specified and omit documenting these
+aspects of the layout. The rest of the device-specific embedded data layout is
+documented in the context of the data layout itself.

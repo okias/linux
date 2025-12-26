@@ -98,6 +98,27 @@ enum ltr_did_type {
 	LTR_TYPE_MAX
 };
 
+struct ltr_did {
+	union {
+		u32 value;
+		struct {
+			u8 val0;
+			u8 val1;
+			u8 val2;
+			u8 val3;
+		} bits;
+	} lut_ltr;
+	union {
+		u32 value;
+		struct {
+			u8 th0;
+			u8 th1;
+			u8 th2;
+			u8 th3;
+		} bits;
+	} lut_fill_time;
+};
+
 #define ISYS_PM_QOS_VALUE	300
 
 static int isys_isr_one(struct ipu6_bus_device *adev);
@@ -139,23 +160,6 @@ unregister_subdev:
 	v4l2_device_unregister_subdev(sd);
 
 	return ret;
-}
-
-static void isys_stream_init(struct ipu6_isys *isys)
-{
-	u32 i;
-
-	for (i = 0; i < IPU6_ISYS_MAX_STREAMS; i++) {
-		mutex_init(&isys->streams[i].mutex);
-		init_completion(&isys->streams[i].stream_open_completion);
-		init_completion(&isys->streams[i].stream_close_completion);
-		init_completion(&isys->streams[i].stream_start_completion);
-		init_completion(&isys->streams[i].stream_stop_completion);
-		INIT_LIST_HEAD(&isys->streams[i].queues);
-		isys->streams[i].isys = isys;
-		isys->streams[i].stream_handle = i;
-		isys->streams[i].vc = INVALID_VC_ID;
-	}
 }
 
 static void isys_csi2_unregister_subdevices(struct ipu6_isys *isys)
@@ -209,7 +213,8 @@ static int isys_csi2_create_media_links(struct ipu6_isys *isys)
 			struct ipu6_isys_video *av = &isys->csi2[i].av[j];
 
 			ret = media_create_pad_link(sd, CSI2_PAD_SRC + j,
-						    &av->vdev.entity, 0, 0);
+						    &av->vdev.entity, 0,
+						    MEDIA_LNK_FL_VALIDATE_LATE);
 			if (ret) {
 				dev_err(dev, "CSI2 can't create link\n");
 				return ret;
@@ -269,7 +274,7 @@ fail:
 	return ret;
 }
 
-void isys_setup_hw(struct ipu6_isys *isys)
+static void isys_setup_hw(struct ipu6_isys *isys)
 {
 	void __iomem *base = isys->pdata->base;
 	const u8 *thd = isys->pdata->ipdata->hw_variant.cdc_fifo_threshold;
@@ -306,10 +311,8 @@ void isys_setup_hw(struct ipu6_isys *isys)
 
 static void ipu6_isys_csi2_isr(struct ipu6_isys_csi2 *csi2)
 {
-	struct ipu6_isys_stream *stream;
 	unsigned int i;
 	u32 status;
-	int source;
 
 	ipu6_isys_register_errors(csi2);
 
@@ -319,40 +322,34 @@ static void ipu6_isys_csi2_isr(struct ipu6_isys_csi2 *csi2)
 	writel(status, csi2->base + CSI_PORT_REG_BASE_IRQ_CSI_SYNC +
 	       CSI_PORT_REG_BASE_IRQ_CLEAR_OFFSET);
 
-	source = csi2->asd.source;
-	for (i = 0; i < NR_OF_CSI2_VC; i++) {
-		if (status & IPU_CSI_RX_IRQ_FS_VC(i)) {
-			stream = ipu6_isys_query_stream_by_source(csi2->isys,
-								  source, i);
-			if (stream) {
-				ipu6_isys_csi2_sof_event_by_stream(stream);
-				ipu6_isys_put_stream(stream);
-			}
-		}
+	scoped_guard(spinlock, &csi2->isys->streams_lock) {
+		for (i = 0; i < NR_OF_CSI2_VC; i++) {
+			struct ipu6_isys_stream *stream =
+				csi2->streams_by_vc[i];
 
-		if (status & IPU_CSI_RX_IRQ_FE_VC(i)) {
-			stream = ipu6_isys_query_stream_by_source(csi2->isys,
-								  source, i);
-			if (stream) {
+			if (!stream)
+				continue;
+
+			if (status & IPU_CSI_RX_IRQ_FS_VC(i))
+				ipu6_isys_csi2_sof_event_by_stream(stream);
+
+			if (status & IPU_CSI_RX_IRQ_FE_VC(i))
 				ipu6_isys_csi2_eof_event_by_stream(stream);
-				ipu6_isys_put_stream(stream);
-			}
 		}
 	}
 }
 
-irqreturn_t isys_isr(struct ipu6_bus_device *adev)
+static irqreturn_t isys_isr(struct ipu6_bus_device *adev)
 {
 	struct ipu6_isys *isys = ipu6_bus_get_drvdata(adev);
 	void __iomem *base = isys->pdata->base;
 	u32 status_sw, status_csi;
 	u32 ctrl0_status, ctrl0_clear;
+	int pm_status;
 
-	spin_lock(&isys->power_lock);
-	if (!isys->power) {
-		spin_unlock(&isys->power_lock);
-		return IRQ_NONE;
-	}
+	pm_status = pm_runtime_get_if_active(&adev->auxdev.dev);
+	if (!pm_status)
+		return 0;
 
 	ctrl0_status = isys->pdata->ipdata->csi2.ctrl0_irq_status;
 	ctrl0_clear = isys->pdata->ipdata->csi2.ctrl0_irq_clear;
@@ -397,23 +394,10 @@ irqreturn_t isys_isr(struct ipu6_bus_device *adev)
 
 	writel(ISYS_UNISPART_IRQS, base + IPU6_REG_ISYS_UNISPART_IRQ_MASK);
 
-	spin_unlock(&isys->power_lock);
+	if (pm_status > 0)
+		pm_runtime_put(&adev->auxdev.dev);
 
 	return IRQ_HANDLED;
-}
-
-static void get_lut_ltrdid(struct ipu6_isys *isys, struct ltr_did *pltr_did)
-{
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
-	struct ltr_did ltrdid_default;
-
-	ltrdid_default.lut_ltr.value = LTR_DEFAULT_VALUE;
-	ltrdid_default.lut_fill_time.value = FILL_TIME_DEFAULT_VALUE;
-
-	if (iwake_watermark->ltrdid.lut_ltr.value)
-		*pltr_did = iwake_watermark->ltrdid;
-	else
-		*pltr_did = ltrdid_default;
 }
 
 static int set_iwake_register(struct ipu6_isys *isys, u32 index, u32 value)
@@ -511,69 +495,57 @@ static void set_iwake_ltrdid(struct ipu6_isys *isys, u16 ltr, u16 did,
  */
 static void enable_iwake(struct ipu6_isys *isys, bool enable)
 {
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
 	int ret;
 
-	mutex_lock(&iwake_watermark->mutex);
-
-	if (iwake_watermark->iwake_enabled == enable) {
-		mutex_unlock(&iwake_watermark->mutex);
+	if (isys->iwake_watermark_enabled == enable)
 		return;
-	}
 
 	ret = set_iwake_register(isys, GDA_ENABLE_IWAKE_INDEX, enable);
 	if (!ret)
-		iwake_watermark->iwake_enabled = enable;
-
-	mutex_unlock(&iwake_watermark->mutex);
+		isys->iwake_watermark_enabled = enable;
 }
 
-void update_watermark_setting(struct ipu6_isys *isys)
+void ipu6_isys_update_watermark_setting(struct ipu6_isys *isys)
 {
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
 	u32 iwake_threshold, iwake_critical_threshold, page_num;
 	struct device *dev = &isys->adev->auxdev.dev;
 	u32 calc_fill_time_us = 0, ltr = 0, did = 0;
-	struct video_stream_watermark *p_watermark;
 	enum ltr_did_type ltr_did_type;
-	struct list_head *stream_node;
 	u64 isys_pb_datarate_mbs = 0;
 	u32 mem_open_threshold = 0;
 	struct ltr_did ltrdid;
 	u64 threshold_bytes;
 	u32 max_sram_size;
 	u32 shift;
+	bool force_iwake_disable = false;
+
+	lockdep_assert_held(&isys->stream_mutex);
 
 	shift = isys->pdata->ipdata->sram_gran_shift;
 	max_sram_size = isys->pdata->ipdata->max_sram_size;
 
-	mutex_lock(&iwake_watermark->mutex);
-	if (iwake_watermark->force_iwake_disable) {
+	for (unsigned int i = 0; i < isys->pdata->ipdata->csi2.nports; i++) {
+		isys_pb_datarate_mbs +=
+			isys->csi2[i].watermark.stream_data_rate;
+		force_iwake_disable |=
+			isys->csi2[i].watermark.force_iwake_disable;
+	}
+
+	if (force_iwake_disable) {
+		dev_dbg(dev, "watermark: forcing iwake disabled\n");
 		set_iwake_ltrdid(isys, 0, 0, LTR_IWAKE_OFF);
 		set_iwake_register(isys, GDA_IRQ_CRITICAL_THRESHOLD_INDEX,
 				   CRITICAL_THRESHOLD_IWAKE_DISABLE);
-		goto unlock_exit;
+		return;
 	}
-
-	if (list_empty(&iwake_watermark->video_list)) {
-		isys_pb_datarate_mbs = 0;
-	} else {
-		list_for_each(stream_node, &iwake_watermark->video_list) {
-			p_watermark = list_entry(stream_node,
-						 struct video_stream_watermark,
-						 stream_node);
-			isys_pb_datarate_mbs += p_watermark->stream_data_rate;
-		}
-	}
-	mutex_unlock(&iwake_watermark->mutex);
 
 	if (!isys_pb_datarate_mbs) {
+		dev_dbg(dev, "watermark: disabled iwake\n");
 		enable_iwake(isys, false);
 		set_iwake_ltrdid(isys, 0, 0, LTR_IWAKE_OFF);
-		mutex_lock(&iwake_watermark->mutex);
 		set_iwake_register(isys, GDA_IRQ_CRITICAL_THRESHOLD_INDEX,
 				   CRITICAL_THRESHOLD_IWAKE_DISABLE);
-		goto unlock_exit;
+		return;
 	}
 
 	enable_iwake(isys, true);
@@ -584,7 +556,8 @@ void update_watermark_setting(struct ipu6_isys *isys)
 		did = calc_fill_time_us * DEFAULT_DID_RATIO / 100;
 		ltr_did_type = LTR_ENHANNCE_IWAKE;
 	} else {
-		get_lut_ltrdid(isys, &ltrdid);
+		ltrdid.lut_ltr.value = LTR_DEFAULT_VALUE;
+		ltrdid.lut_fill_time.value = FILL_TIME_DEFAULT_VALUE;
 
 		if (calc_fill_time_us <= ltrdid.lut_fill_time.bits.th0)
 			ltr = 0;
@@ -608,7 +581,6 @@ void update_watermark_setting(struct ipu6_isys *isys)
 	iwake_threshold = max_t(u32, 1, threshold_bytes >> shift);
 	iwake_threshold = min_t(u32, iwake_threshold, max_sram_size);
 
-	mutex_lock(&iwake_watermark->mutex);
 	if (isys->pdata->ipdata->enhanced_iwake) {
 		set_iwake_register(isys, GDA_IWAKE_THRESHOLD_INDEX,
 				   DEFAULT_IWAKE_THRESHOLD);
@@ -630,7 +602,7 @@ void update_watermark_setting(struct ipu6_isys *isys)
 	iwake_critical_threshold = iwake_threshold +
 		(IS_PIXEL_BUFFER_PAGES - iwake_threshold) / 2;
 
-	dev_dbg(dev, "threshold: %u critical: %u\n", iwake_threshold,
+	dev_dbg(dev, "watermark: threshold: %u critical: %u\n", iwake_threshold,
 		iwake_critical_threshold);
 
 	set_iwake_register(isys, GDA_IRQ_CRITICAL_THRESHOLD_INDEX,
@@ -640,32 +612,6 @@ void update_watermark_setting(struct ipu6_isys *isys)
 	       isys->adev->isp->base + REG_PKGC_PMON_CFG);
 	writel(VAL_PKGC_PMON_CFG_START,
 	       isys->adev->isp->base + REG_PKGC_PMON_CFG);
-unlock_exit:
-	mutex_unlock(&iwake_watermark->mutex);
-}
-
-static void isys_iwake_watermark_init(struct ipu6_isys *isys)
-{
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
-
-	INIT_LIST_HEAD(&iwake_watermark->video_list);
-	mutex_init(&iwake_watermark->mutex);
-
-	iwake_watermark->ltrdid.lut_ltr.value = 0;
-	iwake_watermark->isys = isys;
-	iwake_watermark->iwake_enabled = false;
-	iwake_watermark->force_iwake_disable = false;
-}
-
-static void isys_iwake_watermark_cleanup(struct ipu6_isys *isys)
-{
-	struct isys_iwake_watermark *iwake_watermark = &isys->iwake_watermark;
-
-	mutex_lock(&iwake_watermark->mutex);
-	list_del(&iwake_watermark->video_list);
-	mutex_unlock(&iwake_watermark->mutex);
-
-	mutex_destroy(&iwake_watermark->mutex);
 }
 
 /* The .bound() notifier callback when a match is found */
@@ -853,12 +799,9 @@ static int isys_runtime_pm_resume(struct device *dev)
 {
 	struct ipu6_bus_device *adev = to_ipu6_bus_device(dev);
 	struct ipu6_isys *isys = ipu6_bus_get_drvdata(adev);
+	const struct ipu6_isys_internal_pdata *ipdata = isys->pdata->ipdata;
 	struct ipu6_device *isp = adev->isp;
-	unsigned long flags;
 	int ret;
-
-	if (!isys)
-		return 0;
 
 	ret = ipu6_mmu_hw_init(adev->mmu);
 	if (ret)
@@ -868,36 +811,57 @@ static int isys_runtime_pm_resume(struct device *dev)
 
 	ret = ipu6_buttress_start_tsc_sync(isp);
 	if (ret)
-		return ret;
-
-	spin_lock_irqsave(&isys->power_lock, flags);
-	isys->power = 1;
-	spin_unlock_irqrestore(&isys->power_lock, flags);
+		goto err_mmu_hw_cleanup;
 
 	isys_setup_hw(isys);
 
 	set_iwake_ltrdid(isys, 0, 0, LTR_ISYS_ON);
 
-	return 0;
+	ipu6_configure_spc(adev->isp, &ipdata->hw_variant,
+			   IPU6_CPD_PKG_DIR_ISYS_SERVER_IDX, isys->pdata->base,
+			   adev->pkg_dir, adev->pkg_dir_dma_addr);
+
+	/*
+	 * Buffers could have been left to wrong queue at last closure.
+	 * Move them now back to empty buffer queue.
+	 */
+	ipu6_cleanup_fw_msg_bufs(isys);
+
+	if (isys->fwcom) {
+		/*
+		 * Something went wrong in previous shutdown. As we are now
+		 * restarting isys we can safely delete old context.
+		 */
+		dev_warn(&adev->auxdev.dev, "clearing old context\n");
+		ipu6_fw_isys_cleanup(isys);
+	}
+
+	ret = ipu6_fw_isys_init(isys, ipdata->num_parallel_streams);
+	if (!ret)
+		return 0;
+
+	isys->phy_termcal_val = 0;
+	cpu_latency_qos_update_request(&isys->pm_qos, PM_QOS_DEFAULT_VALUE);
+
+	set_iwake_ltrdid(isys, 0, 0, LTR_ISYS_OFF);
+
+err_mmu_hw_cleanup:
+	ipu6_mmu_hw_cleanup(adev->mmu);
+
+	return ret;
 }
 
 static int isys_runtime_pm_suspend(struct device *dev)
 {
 	struct ipu6_bus_device *adev = to_ipu6_bus_device(dev);
-	struct ipu6_isys *isys;
-	unsigned long flags;
+	struct ipu6_isys *isys = dev_get_drvdata(dev);
+	int ret = 0;
 
-	isys = dev_get_drvdata(dev);
-	if (!isys)
-		return 0;
-
-	spin_lock_irqsave(&isys->power_lock, flags);
-	isys->power = 0;
-	spin_unlock_irqrestore(&isys->power_lock, flags);
-
-	mutex_lock(&isys->mutex);
-	isys->need_reset = false;
-	mutex_unlock(&isys->mutex);
+	ipu6_fw_isys_close(isys);
+	if (isys->fwcom) {
+		dev_warn(&isys->adev->auxdev.dev, "failed to close fw isys\n");
+		ret = -EIO;
+	}
 
 	isys->phy_termcal_val = 0;
 	cpu_latency_qos_update_request(&isys->pm_qos, PM_QOS_DEFAULT_VALUE);
@@ -906,15 +870,17 @@ static int isys_runtime_pm_suspend(struct device *dev)
 
 	ipu6_mmu_hw_cleanup(adev->mmu);
 
-	return 0;
+	return ret;
 }
 
 static int isys_suspend(struct device *dev)
 {
 	struct ipu6_isys *isys = dev_get_drvdata(dev);
 
+	guard(mutex)(&isys->stream_mutex);
+
 	/* If stream is open, refuse to suspend */
-	if (isys->stream_opened)
+	if (!ida_is_empty(&isys->streams))
 		return -EBUSY;
 
 	return 0;
@@ -1048,7 +1014,6 @@ static int isys_probe(struct auxiliary_device *auxdev,
 	struct ipu6_device *isp = adev->isp;
 	const struct firmware *fw;
 	struct ipu6_isys *isys;
-	unsigned int i;
 	int ret;
 
 	if (!isp->bus_ready_to_probe)
@@ -1070,16 +1035,10 @@ static int isys_probe(struct auxiliary_device *auxdev,
 	if (!isys->csi2)
 		return -ENOMEM;
 
-	ret = ipu6_mmu_hw_init(adev->mmu);
-	if (ret)
-		return ret;
-
 	/* initial sensor type */
 	isys->sensor_type = isys->pdata->ipdata->sensor_type_start;
 
 	spin_lock_init(&isys->streams_lock);
-	spin_lock_init(&isys->power_lock);
-	isys->power = 0;
 	isys->phy_termcal_val = 0;
 
 	mutex_init(&isys->mutex);
@@ -1093,7 +1052,7 @@ static int isys_probe(struct auxiliary_device *auxdev,
 
 	dev_set_drvdata(&auxdev->dev, isys);
 
-	isys_stream_init(isys);
+	ida_init(&isys->streams);
 
 	if (!isp->secure_mode) {
 		fw = isp->cpd_fw;
@@ -1111,8 +1070,6 @@ static int isys_probe(struct auxiliary_device *auxdev,
 	ret = alloc_fw_msg_bufs(isys, 20);
 	if (ret < 0)
 		goto out_remove_pkg_dir_shared_buffer;
-
-	isys_iwake_watermark_init(isys);
 
 	if (is_ipu6se(adev->isp->hw_ver))
 		isys->phy_set_power = ipu6_isys_jsl_phy_set_power;
@@ -1142,9 +1099,6 @@ release_firmware:
 	if (!isp->secure_mode)
 		release_firmware(adev->fw);
 
-	for (i = 0; i < IPU6_ISYS_MAX_STREAMS; i++)
-		mutex_destroy(&isys->streams[i].mutex);
-
 	mutex_destroy(&isys->mutex);
 	mutex_destroy(&isys->stream_mutex);
 
@@ -1158,7 +1112,8 @@ static void isys_remove(struct auxiliary_device *auxdev)
 	struct ipu6_bus_device *adev = auxdev_to_adev(auxdev);
 	struct ipu6_isys *isys = dev_get_drvdata(&auxdev->dev);
 	struct ipu6_device *isp = adev->isp;
-	unsigned int i;
+
+	ida_destroy(&isys->streams);
 
 	free_fw_msg_bufs(isys);
 
@@ -1173,10 +1128,6 @@ static void isys_remove(struct auxiliary_device *auxdev)
 		release_firmware(adev->fw);
 	}
 
-	for (i = 0; i < IPU6_ISYS_MAX_STREAMS; i++)
-		mutex_destroy(&isys->streams[i].mutex);
-
-	isys_iwake_watermark_cleanup(isys);
 	mutex_destroy(&isys->stream_mutex);
 	mutex_destroy(&isys->mutex);
 }
@@ -1226,9 +1177,6 @@ static int isys_isr_one(struct ipu6_bus_device *adev)
 	u32 index;
 	u64 ts;
 
-	if (!isys->fwcom)
-		return 1;
-
 	resp = ipu6_fw_isys_get_resp(isys->fwcom, IPU6_BASE_MSG_RECV_QUEUES);
 	if (!resp)
 		return 1;
@@ -1257,7 +1205,10 @@ static int isys_isr_one(struct ipu6_bus_device *adev)
 		goto leave;
 	}
 
-	stream = ipu6_isys_query_stream_by_handle(isys, resp->stream_handle);
+	guard(spinlock_irqsave)(&isys->streams_lock);
+
+	stream = resp->stream_handle < IPU6_ISYS_MAX_STREAMS ?
+		isys->streams_by_handle[resp->stream_handle] : NULL;
 	if (!stream) {
 		dev_err(&adev->auxdev.dev, "stream of stream_handle %u is unused\n",
 			resp->stream_handle);
@@ -1336,7 +1287,6 @@ static int isys_isr_one(struct ipu6_bus_device *adev)
 		break;
 	}
 
-	ipu6_isys_put_stream(stream);
 leave:
 	ipu6_fw_isys_put_resp(isys->fwcom, IPU6_BASE_MSG_RECV_QUEUES);
 	return 0;

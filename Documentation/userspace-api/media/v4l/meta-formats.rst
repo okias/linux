@@ -18,6 +18,7 @@ These formats are used for the :ref:`metadata` interface only.
     pixfmt-meta-bcm2835-isp-stats
     metafmt-d4xx
     metafmt-generic
+    metadata-layouts
     metafmt-intel-ipu3
     metafmt-pisp-be
     metafmt-pisp-fe
