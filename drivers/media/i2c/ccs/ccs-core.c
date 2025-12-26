@@ -3701,7 +3701,7 @@ static int ccs_probe(struct i2c_client *client)
 	const struct ccs_device *ccsdev = device_get_match_data(&client->dev);
 	struct ccs_sensor *sensor;
 	const struct firmware *fw;
-	char filename[40];
+	char filename[64];
 	unsigned int i;
 	int rval;
 
