@@ -3673,16 +3673,16 @@ ccs_request_firmware(struct i2c_client *client, struct ccs_sensor *sensor,
 		     char *filename, size_t filename_size, bool is_module)
 {
 	int rval;
-	bool use_version = false;
+	int use_version = 0;
 
 	do {
-		rval = ccs_firmware_name(client, sensor, filename, sizeof(filename),
+		rval = ccs_firmware_name(client, sensor, filename, filename_size,
 					 is_module, use_version);
-		if (rval >= sizeof(filename))
+		if (rval >= filename_size)
 			return -ENOMEM;
 
 		rval = request_firmware(fw, filename, &client->dev);
-	} while (rval && ++use_version);
+	} while (rval && !use_version++);
 	if (rval)
 		return rval;
 
