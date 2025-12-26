@@ -3036,6 +3036,30 @@ static int ccs_identify_module(struct ccs_sensor *sensor)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&sensor->src->sd);
 	struct ccs_module_info *minfo = &sensor->minfo;
+	const struct minfo_fields {
+		u32 *val;
+		const char * const name;
+	} minfo_fields[] = {
+		{
+			&minfo->sensor_mipi_manufacturer_id,
+			"mipi,sensor-manufacturer-id"
+		}, {
+			&minfo->sensor_model_id,
+			"mipi,sensor-model-id"
+		}, {
+			&minfo->sensor_revision_number,
+			"mipi,sensor-revision"
+		}, {
+			&minfo->mipi_manufacturer_id,
+			"mipi,module-manufacturer-id"
+		}, {
+			&minfo->model_id,
+			"mipi,module-model-id"
+		}, {
+			&minfo->revision_number,
+			"mipi,module-revision"
+		}
+	};
 	unsigned int i;
 	u32 rev;
 	int rval = 0;
@@ -3096,6 +3120,18 @@ static int ccs_identify_module(struct ccs_sensor *sensor)
 	if (rval) {
 		dev_err(&client->dev, "sensor detection failed\n");
 		return -ENODEV;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(minfo_fields); i++) {
+		const struct minfo_fields *mf = &minfo_fields[i];
+		u32 val;
+
+		if (device_property_read_u32(&client->dev, mf->name, &val))
+			continue;
+
+		dev_dbg(&client->dev,
+			"using %s 0x%8.8x from firmware", mf->name, val);
+		*mf->val = val;
 	}
 
 	if (minfo->mipi_manufacturer_id)
@@ -3174,6 +3210,16 @@ static int ccs_identify_module(struct ccs_sensor *sensor)
 		minfo->quirk = ccs_module_idents[i].quirk;
 		break;
 	}
+
+	if (!device_property_read_string(&client->dev, "camera_module_canonical",
+					 &minfo->module_ident_canonical))
+		dev_dbg(&client->dev, "using canonical module identity %s\n",
+			minfo->module_ident_canonical);
+	else if (!device_property_read_u32(&client->dev,
+					     "camera_module_casual",
+					     &minfo->module_ident_non_canonical))
+		dev_dbg(&client->dev, "using non-canonical module identity %u\n",
+			minfo->module_ident_non_canonical);
 
 	dev_dbg(&client->dev, "the sensor is called %s\n", minfo->name);
 
@@ -3549,7 +3595,8 @@ out_err:
 
 static int ccs_firmware_name(struct i2c_client *client,
 			     struct ccs_sensor *sensor, char *filename,
-			     size_t filename_size, bool is_module)
+			     size_t filename_size, bool is_module,
+			     bool use_version)
 {
 	const struct ccs_device *ccsdev = device_get_match_data(&client->dev);
 	bool is_ccs = !(ccsdev->flags & CCS_DEVICE_FLAG_IS_SMIA);
@@ -3568,12 +3615,47 @@ static int ccs_firmware_name(struct i2c_client *client,
 			sensor->minfo.smia_manufacturer_id;
 		model_id = sensor->minfo.model_id;
 		revision_number = sensor->minfo.revision_number;
+
+		if (sensor->minfo.module_ident_canonical)
+			return snprintf(filename, filename_size,
+					"ccs/canonical/module-%s%s%0.*x.fw",
+					sensor->minfo.module_ident_canonical,
+					use_version ? "-" : "",
+					use_version ? 4 : 0,
+					use_version ? revision_number : 0);
+
+		if (sensor->minfo.module_ident_non_canonical)
+			return snprintf(filename, filename_size,
+					"ccs/non-canonical/module-%u%s%0.*x.fw",
+					sensor->minfo.module_ident_non_canonical,
+					use_version ? "-" : "",
+					use_version ? 4 : 0,
+					use_version ? revision_number : 0);
 	} else {
 		manufacturer_id = is_ccs ?
 			sensor->minfo.sensor_mipi_manufacturer_id :
 			sensor->minfo.sensor_smia_manufacturer_id;
 		model_id = sensor->minfo.sensor_model_id;
 		revision_number = sensor->minfo.sensor_revision_number;
+
+		/*
+		 * Find the sensor CCS static data file for effectively
+		 * compliant devices.
+		 */
+		const char *compatible;
+		int ret;
+
+		ret = device_property_read_string(&client->dev,
+						  "compatible",
+						  &compatible);
+		if (!ret &&
+		    strstr(compatible, "mipi-ccs") != compatible &&
+		    strstr(compatible, "nokia,smia") != compatible)
+			return snprintf(filename, filename_size,
+					"ccs/compatible/sensor-%s%s%0.*x.fw",
+					compatible, use_version ? "-" : "",
+					use_version ? is_ccs ? 4 : 2 : 0,
+					use_version ? revision_number : 0);
 	}
 
 	return snprintf(filename, filename_size,
@@ -3583,6 +3665,33 @@ static int ccs_firmware_name(struct i2c_client *client,
 				"module" : "sensor",
 			is_ccs ? 4 : 2, manufacturer_id, model_id,
 			!is_ccs && !is_module ? 2 : 4, revision_number);
+}
+
+static int
+ccs_request_firmware(struct i2c_client *client, struct ccs_sensor *sensor,
+		     struct ccs_data_container *data, const struct firmware **fw,
+		     char *filename, size_t filename_size, bool is_module)
+{
+	int rval;
+	bool use_version = false;
+
+	do {
+		rval = ccs_firmware_name(client, sensor, filename, sizeof(filename),
+					 is_module, use_version);
+		if (rval >= sizeof(filename))
+			return -ENOMEM;
+
+		rval = request_firmware(fw, filename, &client->dev);
+	} while (rval && ++use_version);
+	if (rval)
+		return rval;
+
+	rval = ccs_data_parse(&sensor->sdata, (*fw)->data, (*fw)->size,
+			      &client->dev, true);
+	release_firmware(*fw);
+	*fw = NULL;
+
+	return rval;
 }
 
 static int ccs_probe(struct i2c_client *client)
@@ -3705,38 +3814,20 @@ static int ccs_probe(struct i2c_client *client)
 		goto out_power_off;
 	}
 
-	rval = ccs_firmware_name(client, sensor, filename, sizeof(filename),
-				 false);
-	if (rval >= sizeof(filename)) {
+	rval = ccs_request_firmware(client, sensor, &sensor->sdata, &fw,
+				    filename, sizeof(filename), false);
+	if (rval) {
 		rval = -ENOMEM;
 		goto out_power_off;
 	}
 
-	rval = request_firmware(&fw, filename, &client->dev);
-	if (!rval) {
-		rval = ccs_data_parse(&sensor->sdata, fw->data, fw->size,
-				      &client->dev, true);
-		release_firmware(fw);
-		if (rval)
-			goto out_power_off;
-	}
-
 	if (!(ccsdev->flags & CCS_DEVICE_FLAG_IS_SMIA) ||
 	    sensor->minfo.smiapp_version) {
-		rval = ccs_firmware_name(client, sensor, filename,
-					 sizeof(filename), true);
-		if (rval >= sizeof(filename)) {
+		rval = ccs_request_firmware(client, sensor, &sensor->mdata, &fw,
+					    filename, sizeof(filename), false);
+		if (rval) {
 			rval = -ENOMEM;
 			goto out_release_sdata;
-		}
-
-		rval = request_firmware(&fw, filename, &client->dev);
-		if (!rval) {
-			rval = ccs_data_parse(&sensor->mdata, fw->data,
-					      fw->size, &client->dev, true);
-			release_firmware(fw);
-			if (rval)
-				goto out_release_sdata;
 		}
 	}
 
