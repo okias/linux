@@ -3618,7 +3618,7 @@ static int ccs_firmware_name(struct i2c_client *client,
 
 		if (sensor->minfo.module_ident_canonical)
 			return snprintf(filename, filename_size,
-					"ccs/canonical/module-%s%s%0.*x.fw",
+					"ccs/canonical/module-%s%s%*x.fw",
 					sensor->minfo.module_ident_canonical,
 					use_version ? "-" : "",
 					use_version ? 4 : 0,
@@ -3626,7 +3626,7 @@ static int ccs_firmware_name(struct i2c_client *client,
 
 		if (sensor->minfo.module_ident_non_canonical)
 			return snprintf(filename, filename_size,
-					"ccs/non-canonical/module-%u%s%0.*x.fw",
+					"ccs/non-canonical/module-%u%s%*x.fw",
 					sensor->minfo.module_ident_non_canonical,
 					use_version ? "-" : "",
 					use_version ? 4 : 0,
@@ -3652,7 +3652,7 @@ static int ccs_firmware_name(struct i2c_client *client,
 		    strstr(compatible, "mipi-ccs") != compatible &&
 		    strstr(compatible, "nokia,smia") != compatible)
 			return snprintf(filename, filename_size,
-					"ccs/compatible/sensor-%s%s%0.*x.fw",
+					"ccs/compatible/sensor-%s%s%0*x.fw",
 					compatible, use_version ? "-" : "",
 					use_version ? is_ccs ? 4 : 2 : 0,
 					use_version ? revision_number : 0);
