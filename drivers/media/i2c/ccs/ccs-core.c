@@ -3816,7 +3816,7 @@ static int ccs_probe(struct i2c_client *client)
 
 	rval = ccs_request_firmware(client, sensor, &sensor->sdata, &fw,
 				    filename, sizeof(filename), false);
-	if (rval) {
+	if (rval && rval != -ENOENT) {
 		rval = -ENOMEM;
 		goto out_power_off;
 	}
@@ -3825,7 +3825,7 @@ static int ccs_probe(struct i2c_client *client)
 	    sensor->minfo.smiapp_version) {
 		rval = ccs_request_firmware(client, sensor, &sensor->mdata, &fw,
 					    filename, sizeof(filename), false);
-		if (rval) {
+		if (rval && rval != -ENOENT) {
 			rval = -ENOMEM;
 			goto out_release_sdata;
 		}
