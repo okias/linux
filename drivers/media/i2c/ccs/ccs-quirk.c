@@ -215,3 +215,14 @@ static int tcm8500md_limits(struct ccs_sensor *sensor)
 const struct ccs_quirk smiapp_tcm8500md_quirk = {
 	.limits = tcm8500md_limits,
 };
+
+static int imx519_limits(struct ccs_sensor *sensor)
+{
+	ccs_replace_limit(sensor, CCS_R_CSI_CPHY_LANE_MODE_CAPABILITY, 0,
+			  CCS_CSI_CPHY_LANE_MODE_CAPABILITY_3_LANE);
+	return 0;
+}
+
+const struct ccs_quirk smiapp_imx519_quirk = {
+	.limits = imx519_limits,
+};

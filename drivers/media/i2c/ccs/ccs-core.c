@@ -58,6 +58,7 @@ static const struct ccs_module_ident ccs_module_idents[] = {
 	CCS_IDENT_LQ(0x0c, 0x560f, -1, "jt8ew9", &smiapp_jt8ew9_quirk),
 	CCS_IDENT_LQ(0x10, 0x4141, -1, "jt8ev1", &smiapp_jt8ev1_quirk),
 	CCS_IDENT_LQ(0x10, 0x4241, -1, "imx125es", &smiapp_imx125es_quirk),
+	CCS_IDENT_LQ(0x00, 0x0000, -1, "imx519", &smiapp_imx519_quirk),
 };
 
 #define CCS_DEVICE_FLAG_IS_SMIA		BIT(0)
