@@ -839,7 +839,7 @@ int ccs_pll_calculate(struct device *dev, const struct ccs_pll_limits *lim,
 	dev_dbg(dev, "mul %u / div %u\n", mul, div);
 
 	min_op_pre_pll_clk_div =
-		max_t(u16, min_op_pre_pll_clk_div,
+		min_t(u16, min_op_pre_pll_clk_div,
 		      clk_div_even_up(
 			      mul /
 			      one_or_more(
