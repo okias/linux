@@ -137,7 +137,6 @@ int ipu6_fw_isys_close(struct ipu6_isys *isys)
 {
 	struct device *dev = &isys->adev->auxdev.dev;
 	int retry = IPU6_ISYS_CLOSE_RETRY;
-	unsigned long flags;
 	void *fwcom;
 	int ret;
 
@@ -147,11 +146,9 @@ int ipu6_fw_isys_close(struct ipu6_isys *isys)
 	 * to SP icache.
 	 * spinlock to wait the interrupt handler to be finished
 	 */
-	spin_lock_irqsave(&isys->power_lock, flags);
 	ret = ipu6_fw_com_close(isys->fwcom);
 	fwcom = isys->fwcom;
 	isys->fwcom = NULL;
-	spin_unlock_irqrestore(&isys->power_lock, flags);
 	if (ret)
 		dev_err(dev, "Device close failure: %d\n", ret);
 
@@ -164,9 +161,7 @@ int ipu6_fw_isys_close(struct ipu6_isys *isys)
 
 	if (ret) {
 		dev_err(dev, "Device release time out %d\n", ret);
-		spin_lock_irqsave(&isys->power_lock, flags);
 		isys->fwcom = fwcom;
-		spin_unlock_irqrestore(&isys->power_lock, flags);
 	}
 
 	return ret;

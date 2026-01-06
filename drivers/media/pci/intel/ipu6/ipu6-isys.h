@@ -4,6 +4,7 @@
 #ifndef IPU6_ISYS_H
 #define IPU6_ISYS_H
 
+#include <linux/idr.h>
 #include <linux/irqreturn.h>
 #include <linux/list.h>
 #include <linux/mutex.h>
@@ -60,38 +61,6 @@ struct ipu6_bus_device;
 #define IPU6EP_MTL_LTR_VALUE			1023
 #define IPU6EP_MTL_MIN_MEMOPEN_TH		0xc
 
-struct ltr_did {
-	union {
-		u32 value;
-		struct {
-			u8 val0;
-			u8 val1;
-			u8 val2;
-			u8 val3;
-		} bits;
-	} lut_ltr;
-	union {
-		u32 value;
-		struct {
-			u8 th0;
-			u8 th1;
-			u8 th2;
-			u8 th3;
-		} bits;
-	} lut_fill_time;
-};
-
-struct isys_iwake_watermark {
-	bool iwake_enabled;
-	bool force_iwake_disable;
-	u32 iwake_threshold;
-	u64 isys_pixelbuffer_datarate;
-	struct ltr_did ltrdid;
-	struct mutex mutex; /* protect whole struct */
-	struct ipu6_isys *isys;
-	struct list_head video_list;
-};
-
 struct ipu6_isys_csi2_config {
 	u32 nlanes;
 	u32 port;
@@ -108,9 +77,6 @@ struct sensor_async_sd {
  * @media_dev: Media device
  * @v4l2_dev: V4L2 device
  * @adev: ISYS bus device
- * @power: Is ISYS powered on or not?
- * @isr_bits: Which bits does the ISR handle?
- * @power_lock: Serialise access to power (power state in general)
  * @csi2_rx_ctrl_cached: cached shared value between all CSI2 receivers
  * @streams_lock: serialise access to streams
  * @streams: streams per firmware stream ID
@@ -118,7 +84,6 @@ struct sensor_async_sd {
  *         or optional external library private pointer
  * @phy_termcal_val: the termination calibration value, only used for DWC PHY
  * @need_reset: Isys requires d0i0->i3 transition
- * @ref_count: total number of callers fw open
  * @mutex: serialise access isys video open/release related operations
  * @stream_mutex: serialise stream start and stop, queueing requests
  * @pdata: platform data pointer
@@ -129,20 +94,17 @@ struct ipu6_isys {
 	struct v4l2_device v4l2_dev;
 	struct ipu6_bus_device *adev;
 
-	int power;
-	spinlock_t power_lock;
 	u32 isr_csi2_bits;
 	u32 csi2_rx_ctrl_cached;
 	spinlock_t streams_lock;
-	struct ipu6_isys_stream streams[IPU6_ISYS_MAX_STREAMS];
-	int streams_ref_count[IPU6_ISYS_MAX_STREAMS];
+	struct ipu6_isys_stream *streams_by_handle[IPU6_ISYS_MAX_STREAMS];
+	struct completion stream_completion;
 	void *fwcom;
 	u32 phy_termcal_val;
 	bool need_reset;
 	bool icache_prefetch;
 	bool csi2_cse_ipc_not_supported;
-	unsigned int ref_count;
-	unsigned int stream_opened;
+	bool iwake_watermark_enabled;
 	unsigned int sensor_type;
 
 	struct mutex mutex;
@@ -162,7 +124,7 @@ struct ipu6_isys {
 	struct list_head framebuflist;
 	struct list_head framebuflist_fw;
 	struct v4l2_async_notifier notifier;
-	struct isys_iwake_watermark iwake_watermark;
+	struct ida streams;
 };
 
 struct isys_fw_msgs {
@@ -181,9 +143,7 @@ void ipu6_cleanup_fw_msg_bufs(struct ipu6_isys *isys);
 
 extern const struct v4l2_ioctl_ops ipu6_isys_ioctl_ops;
 
-void isys_setup_hw(struct ipu6_isys *isys);
-irqreturn_t isys_isr(struct ipu6_bus_device *adev);
-void update_watermark_setting(struct ipu6_isys *isys);
+void ipu6_isys_update_watermark_setting(struct ipu6_isys *isys);
 
 int ipu6_isys_mcd_phy_set_power(struct ipu6_isys *isys,
 				struct ipu6_isys_csi2_config *cfg,

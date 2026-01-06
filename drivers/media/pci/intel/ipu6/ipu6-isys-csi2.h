@@ -38,11 +38,20 @@ struct ipu6_isys_csi2 {
 	struct ipu6_isys_subdev asd;
 	struct ipu6_isys *isys;
 	struct ipu6_isys_video av[NR_OF_CSI2_SRC_PADS];
+	struct list_head av_head;
+	struct list_head streams;
+	struct ipu6_isys_stream *streams_by_vc[NR_OF_CSI2_VC];
 
 	void __iomem *base;
 	u32 receiver_errors;
 	unsigned int nlanes;
 	unsigned int port;
+	struct {
+		u32 stream_data_rate;
+		bool force_iwake_disable;
+	} watermark;
+	bool streaming;
+	u64 stream_ids;
 };
 
 struct ipu6_isys_csi2_timing {

@@ -460,7 +460,7 @@ selection will refer to the sink pad format dimensions instead.
     :alt:   subdev-image-processing-crop.svg
     :align: center
 
-    **Figure 4.5. Image processing in subdevs: simple crop example**
+    Image processing in subdevs: simple crop example
 
 In the above example, the subdev supports cropping on its sink pad. To
 configure it, the user sets the media bus format on the subdev's sink
@@ -477,7 +477,7 @@ pad.
     :alt:   subdev-image-processing-scaling-multi-source.svg
     :align: center
 
-    **Figure 4.6. Image processing in subdevs: scaling with multiple sources**
+    Image processing in subdevs: scaling with multiple sources
 
 In this example, the subdev is capable of first cropping, then scaling
 and finally cropping for two source pads individually from the resulting
@@ -493,7 +493,7 @@ an area at location specified by the source crop rectangle from it.
     :alt:    subdev-image-processing-full.svg
     :align:  center
 
-    **Figure 4.7. Image processing in subdevs: scaling and composition with multiple sinks and sources**
+    Image processing in subdevs: scaling and composition with multiple sinks and sources
 
 The subdev driver supports two sink pads and two source pads. The images
 from both of the sink pads are individually cropped, then scaled and
@@ -554,6 +554,29 @@ A stream at a specific point in the media pipeline is identified by the
 sub-device and a (pad, stream) pair. For sub-devices that do not support
 multiplexed streams the 'stream' field is always 0.
 
+.. _v4l2-subdev-internal-source-pads:
+
+Internal sink pads and routing
+------------------------------
+
+Cases where a single sub-device source pad is carries multiple streams, one or
+more of which originate from within the sub-device itself, are special as there
+is no external sink pad for such routes. In those cases, the sources of the
+internally generated streams are represented by internal sink pads, which are
+sink pads that have the :ref:`MEDIA_PAD_FL_INTERNAL <MEDIA-PAD-FL-INTERNAL>` pad
+flag set.
+
+Internal pads have all the properties of an external pad, including formats and
+selections. The format in this case is the source format of the stream. An
+internal pad always has a single stream only (0).
+
+Routes from an internal sink pad to an external source pad are created by the
+driver and can be activated and deactivated using the
+:ref:`V4L2_SUBDEV_ROUTE_FL_ACTIVE <v4l2-subdev-routing-flags>` flag, depending
+on the device capabilities. The :ref:`V4L2_SUBDEV_ROUTE_FL_IMMUTABLE
+<v4l2-subdev-routing-flags>` flag indicates that the
+``V4L2_SUBDEV_ROUTE_FLAG_ACTIVE`` of the route may not be unset.
+
 Interaction between routes, streams, formats and selections
 -----------------------------------------------------------
 
@@ -578,15 +601,18 @@ Device types and routing setup
 
 Different kinds of sub-devices have differing behaviour for route activation,
 depending on the hardware. In all cases, however, only routes that have the
-``V4L2_SUBDEV_STREAM_FL_ACTIVE`` flag set are active.
+``V4L2_SUBDEV_ROUTE_FL_ACTIVE`` flag set are active.
 
 Devices generating the streams may allow enabling and disabling some of the
-routes or have a fixed routing configuration. If the routes can be disabled, not
-declaring the routes (or declaring them without
-``V4L2_SUBDEV_STREAM_FL_ACTIVE`` flag set) in ``VIDIOC_SUBDEV_S_ROUTING`` will
-disable the routes. ``VIDIOC_SUBDEV_S_ROUTING`` will still return such routes
-back to the user in the routes array, with the ``V4L2_SUBDEV_STREAM_FL_ACTIVE``
-flag unset.
+routes or have a fixed routing configuration. Routes that are bound to hardware
+resources and are always present are marked with ``V4L2_SUBDEV_ROUTE_FL_STATIC``
+flag. Static routes that cannot be disabled are marked with
+``V4L2_SUBDEV_ROUTE_FL_IMMUTABLE`` route flag. Static routes can be disabled by
+not declaring the routes (or declaring them without
+``V4L2_SUBDEV_ROUTE_FL_ACTIVE`` flag set) in
+``VIDIOC_SUBDEV_S_ROUTING``. ``VIDIOC_SUBDEV_S_ROUTING`` will still return such
+routes back to the user in the routes array, with the
+``V4L2_SUBDEV_ROUTE_FL_ACTIVE`` flag unset.
 
 Devices transporting the streams almost always have more configurability with
 respect to routing. Typically any route between the sub-device's sink and source
@@ -595,6 +621,12 @@ be active simultaneously. For such devices, no routes are created by the driver
 and user-created routes are fully replaced when ``VIDIOC_SUBDEV_S_ROUTING`` is
 called on the sub-device. Such newly created routes have the device's default
 configuration for format and selection rectangles.
+
+A sub-device may only have either static routes (routes that have
+``V4L2_SUBDEV_ROUTE_FL_STATIC`` flag set) or routes that are all user-created or
+user-removable (routes that do not have ``V4L2_SUBDEV_ROUTE_FL_STATIC``
+flag). Mixing static and non-static routes is not allowed in the same
+sub-device. This is subject to change in the future.
 
 Configuring streams
 -------------------
@@ -692,3 +724,140 @@ To configure this pipeline, the userspace must take the following steps:
    the configurations along the stream towards the receiver, using
    :ref:`VIDIOC_SUBDEV_S_FMT <VIDIOC_SUBDEV_G_FMT>` ioctls to configure each
    stream endpoint in each sub-device.
+
+   In case generic raw and metadata formats are used,
+   :ref:`V4L2_CID_CFA_PATTERN <image-source-control-cfa-pattern>` and
+   :ref:`V4L2_CID_METADATA_LAYOUT <image_source_control_metadata_layout>`
+   controls are present on the source sub-device to obtain the pixel array CFA
+   pattern and metadata layout.
+
+Internal pads setup example
+---------------------------
+
+A simple example of a multiplexed stream setup might be as follows:
+
+- An IMX219 camera sensor source sub-device, with one source pad (0), one
+  internal sink pad (1) as the source of the image data and an internal sink
+  pad (2) as the source of the embedded data. There are two routes, one from the
+  internal sink pad 1 to the source pad 0 (image data) and another from the
+  internal sink pad 2 to the source pad 0 (embedded data). Both streams are
+  always active, i.e. there is no need to separately enable the embedded data
+  stream. The sensor uses the CSI-2 interface.
+
+- A CSI-2 receiver in the SoC. The receiver has a single sink pad (pad 0),
+  connected to the sensor's source pad (0), and two source pads (pads 1 and 2),
+  to two DMA engines. The receiver demultiplexes the incoming streams to the
+  source pads.
+
+- Two DMA engines in the SoC, one for each stream. Each DMA engine is connected
+  to a different source pad of the receiver.
+
+The sensor and the receiver are modelled as V4L2 sub-devices, exposed to
+userspace via /dev/v4l-subdevX device nodes. The DMA engines are modelled as
+V4L2 video devices, exposed to userspace via /dev/videoX nodes.
+
+To configure this pipeline, the userspace must take the following steps:
+
+1) Set up media links between entities: enable the links from the sensor to the
+   receiver and from the receiver to the DMA engines. This step does not differ
+   from normal non-multiplexed media controller setup.
+
+2) Configure routing
+
+.. flat-table:: Camera sensor. There are no configurable routes.
+    :header-rows: 1
+
+    * - Sink Pad/Stream
+      - Source Pad/Stream
+      - Routing Flags
+      - Comments
+    * - 1/0
+      - 0/0
+      - V4L2_SUBDEV_ROUTE_FL_ACTIVE | V4L2_SUBDEV_ROUTE_FL_IMMUTABLE |
+        V4L2_SUBDEV_ROUTE_FL_STATIC
+      - Pixel data stream from the internal image sink pad
+    * - 2/0
+      - 0/1
+      - V4L2_SUBDEV_ROUTE_FL_ACTIVE | V4L2_SUBDEV_ROUTE_FL_IMMUTABLE |
+        V4L2_SUBDEV_ROUTE_FL_STATIC
+      - Metadata stream from the internal embedded data sink pad
+
+While both routes are immutable for the IMX219, other camera sensors may offer
+more flexible configuration options. Routing configuration is dictated by the
+hardware capabilities: camera sensors typically always produce an image data
+stream, but some of them support enabling and disabling the embedded data
+stream.
+
+.. flat-table:: Receiver routing table. Typically both routes need to be
+		explicitly created.
+    :header-rows:  1
+
+    * - Sink Pad/Stream
+      - Source Pad/Stream
+      - Routing Flags
+      - Comments
+    * - 0/0
+      - 1/0
+      - V4L2_SUBDEV_ROUTE_FL_ACTIVE
+      - Pixel data stream from camera sensor
+    * - 0/1
+      - 2/0
+      - V4L2_SUBDEV_ROUTE_FL_ACTIVE
+      - Metadata stream from camera sensor
+
+3) Configure formats and selections
+
+   This example assumes that the formats are propagated from sink pad to the
+   source pad as-is. The tables contain fields of both struct v4l2_subdev_format
+   and struct v4l2_mbus_framefmt.
+
+.. flat-table:: Formats set on the sub-devices. Bold values are set, others are
+                static or propagated. The order is aligned with configured
+                routes.
+    :header-rows: 1
+    :fill-cells:
+
+    * - Sub-device
+      - Pad/Stream
+      - Width
+      - Height
+      - Code
+    * - :rspan:`3` IMX219
+      - 1/0
+      - 3296
+      - 2480
+      - MEDIA_BUS_FMT_RAW_10
+    * - 0/0
+      - **3296**
+      - **2480**
+      - **MEDIA_BUS_FMT_RAW_10**
+    * - 2/0
+      - 3296
+      - 2
+      - MEDIA_BUS_FMT_META_10
+    * - 0/1
+      - 3296
+      - 2
+      - MEDIA_BUS_FMT_META_10
+    * - :rspan:`3` CSI-2 receiver
+      - 0/0
+      - **3296**
+      - **2480**
+      - **MEDIA_BUS_FMT_RAW_10**
+    * - 1/0
+      - 3296
+      - 2480
+      - MEDIA_BUS_FMT_RAW_10
+    * - 0/1
+      - **3296**
+      - **2**
+      - **MEDIA_BUS_FMT_META_10**
+    * - 2/0
+      - 3296
+      - 2
+      - MEDIA_BUS_FMT_META_10
+
+The embedded data format does not need to be configured on the sensor's pads as
+the format is dictated by the pixel data format in this case.
+
+.. include:: subdev-config-model.rst

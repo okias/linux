@@ -208,6 +208,7 @@ struct media_entity_desc {
 #define MEDIA_PAD_FL_SINK			(1U << 0)
 #define MEDIA_PAD_FL_SOURCE			(1U << 1)
 #define MEDIA_PAD_FL_MUST_CONNECT		(1U << 2)
+#define MEDIA_PAD_FL_INTERNAL			(1U << 3)
 
 struct media_pad_desc {
 	__u32 entity;		/* entity ID */
@@ -219,6 +220,7 @@ struct media_pad_desc {
 #define MEDIA_LNK_FL_ENABLED			(1U << 0)
 #define MEDIA_LNK_FL_IMMUTABLE			(1U << 1)
 #define MEDIA_LNK_FL_DYNAMIC			(1U << 2)
+#define MEDIA_LNK_FL_VALIDATE_LATE		(1U << 3)
 
 #define MEDIA_LNK_FL_LINK_TYPE			(0xf << 28)
 #  define MEDIA_LNK_FL_DATA_LINK		(0U << 28)

@@ -204,6 +204,15 @@ struct v4l2_subdev_capability {
  * on a video node.
  */
 #define V4L2_SUBDEV_ROUTE_FL_ACTIVE		(1U << 0)
+/*
+ * Is the route immutable? The ACTIVE flag of an immutable route may not be
+ * unset.
+ */
+#define V4L2_SUBDEV_ROUTE_FL_IMMUTABLE		(1U << 1)
+/*
+ * Is the route static? Routes with the STATIC flag are not removable.
+ */
+#define V4L2_SUBDEV_ROUTE_FL_STATIC		(1U << 2)
 
 /**
  * struct v4l2_subdev_route - A route inside a subdev
