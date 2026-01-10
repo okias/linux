@@ -464,17 +464,17 @@ static const struct cci_reg_sequence mode_4656x3496_regs[] = {
 	{ CCI_REG8(0x034d), 0x30 },
 	{ CCI_REG8(0x034e), 0x0d },
 	{ CCI_REG8(0x034f), 0xa8 },
-	{ CCI_REG8(0x0301), 0x06 },
-	{ CCI_REG8(0x0303), 0x04 },
-	{ CCI_REG8(0x0305), 0x04 },
-	{ CCI_REG8(0x0306), 0x01 },
-	{ CCI_REG8(0x0307), 0x57 },
-	{ CCI_REG8(0x0309), 0x0a },
-	{ CCI_REG8(0x030b), 0x02 },
-	{ CCI_REG8(0x030d), 0x04 },
-	{ CCI_REG8(0x030e), 0x01 },
-	{ CCI_REG8(0x030f), 0x49 },
-	{ CCI_REG8(0x0310), 0x01 },
+	{ CCI_REG8(0x0301), 0x06 }, //vt_pix_clk_div 6
+	{ CCI_REG8(0x0303), 0x04 }, //vt_sys_clk_div 4
+	{ CCI_REG8(0x0305), 0x04 }, //pre_pll_clk_div or vt_pre_pll_clk_div 4
+	{ CCI_REG8(0x0306), 0x01 }, //pll_multiplier 343
+	{ CCI_REG8(0x0307), 0x57 }, //---||---
+	{ CCI_REG8(0x0309), 0x0a }, //op_pix_clk_div 10
+	{ CCI_REG8(0x030b), 0x02 }, //op_sys_clk_div 2
+	{ CCI_REG8(0x030d), 0x04 }, //op_pre_pll_clk_div 4
+	{ CCI_REG8(0x030e), 0x01 }, //op_pll_multiplier 329
+	{ CCI_REG8(0x030f), 0x49 }, //---||---
+	{ CCI_REG8(0x0310), 0x01 }, //pll_mode 1 2-PLL mode
 	{ CCI_REG8(0x0820), 0x0c },
 	{ CCI_REG8(0x0821), 0xe4 },
 	{ CCI_REG8(0x0822), 0x00 },
