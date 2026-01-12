@@ -613,7 +613,7 @@ ccs_pll_calculate_op(struct device *dev, const struct ccs_pll_limits *lim,
 		     const struct ccs_pll_branch_limits_bk *op_lim_bk,
 		     struct ccs_pll *pll, struct ccs_pll_branch_fr *op_pll_fr,
 		     struct ccs_pll_branch_bk *op_pll_bk, u32 mul,
-		     u32 div, u32 op_sys_clk_freq_hz_sdr, u32 l,
+		     u32 div, u64 op_sys_clk_freq_hz_sdr, u32 l,
 		     bool cphy, u32 phy_const)
 {
 	/*
@@ -735,7 +735,7 @@ int ccs_pll_calculate(struct device *dev, const struct ccs_pll_limits *lim,
 	struct ccs_pll_branch_bk *op_pll_bk;
 	bool cphy = pll->bus_type == CCS_PLL_BUS_TYPE_CSI2_CPHY;
 	u32 phy_const = cphy ? CPHY_CONST : DPHY_CONST;
-	u32 op_sys_clk_freq_hz_sdr;
+	u64 op_sys_clk_freq_hz_sdr;
 	u16 min_op_pre_pll_clk_div;
 	u16 max_op_pre_pll_clk_div;
 	u32 mul, div;
@@ -801,8 +801,8 @@ int ccs_pll_calculate(struct device *dev, const struct ccs_pll_limits *lim,
 		pll->binning_vertical);
 
 	switch (pll->bus_type) {
-	case CCS_PLL_BUS_TYPE_CSI2_DPHY:
 	case CCS_PLL_BUS_TYPE_CSI2_CPHY:
+	case CCS_PLL_BUS_TYPE_CSI2_DPHY:
 		op_sys_clk_freq_hz_sdr = pll->link_freq * 2
 			* (pll->flags & CCS_PLL_FLAG_LANE_SPEED_MODEL ?
 			   1 : pll->csi2.lanes);
