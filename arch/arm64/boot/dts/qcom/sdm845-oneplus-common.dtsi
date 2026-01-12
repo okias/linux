@@ -654,7 +654,7 @@
 				bus-type = <MEDIA_BUS_TYPE_CSI2_CPHY>;
 				remote-endpoint = <&csiphy0_ep>;
 				data-lanes = <1 2 3>;
-				link-frequencies = /bits/ 64 <500399375>;
+				link-frequencies = /bits/ 64 <1668000000>;
 			};
 		};
 	};
