@@ -760,6 +760,15 @@ static struct attribute *stmfts_sysfs_attrs[] = {
 };
 ATTRIBUTE_GROUPS(stmfts_sysfs);
 
+static void stmfts_reset(struct stmfts_data *sdata)
+{
+	gpiod_set_value_cansleep(sdata->reset_gpiod, 0);
+	msleep(20);
+
+	gpiod_set_value_cansleep(sdata->reset_gpiod, 1);
+	msleep(50);
+}
+
 static int stmfts_power_on(struct stmfts_data *sdata)
 {
 	int err;
@@ -773,11 +782,7 @@ static int stmfts_power_on(struct stmfts_data *sdata)
 
 	msleep(10);
 
-	gpiod_set_value_cansleep(sdata->reset_gpiod, 0);
-	msleep(20);
-
-	gpiod_set_value_cansleep(sdata->reset_gpiod, 1);
-	msleep(50);
+	stmfts_reset(sdata);
 
 	/* Verify I2C communication */
 	ret = i2c_smbus_read_i2c_block_data(sdata->client,
