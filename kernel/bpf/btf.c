@@ -6467,7 +6467,7 @@ err_out:
  * split BTF ids will need to be mapped to actual base/split ids for
  * BTF now that it has been relocated.
  */
-static __u32 btf_relocate_id(const struct btf *btf, __u32 id)
+__u32 btf_relocate_id(const struct btf *btf, __u32 id)
 {
 	if (!btf->base_btf || !btf->base_id_map)
 		return id;
@@ -8630,7 +8630,7 @@ struct module *btf_try_get_module(const struct btf *btf)
 /* Returns struct btf corresponding to the struct module.
  * This function can return NULL or ERR_PTR.
  */
-static struct btf *btf_get_module_btf(const struct module *module)
+struct btf *btf_get_module_btf(const struct module *module)
 {
 #ifdef CONFIG_DEBUG_INFO_BTF_MODULES
 	struct btf_module *btf_mod, *tmp;
@@ -9112,6 +9112,35 @@ u32 *btf_kfunc_flags(const struct btf *btf, u32 kfunc_btf_id, const struct bpf_p
 
 	hook = bpf_prog_type_to_kfunc_hook(prog_type);
 	return btf_kfunc_id_set_contains(btf, hook, kfunc_btf_id);
+}
+
+/*
+ * Check a single KF_* @flag on a kfunc across all of its hook sets.
+ * Returns:
+ *   * 1 if @flag is set
+ *   * 0 if @flag is not set
+ *   * -EINVAL if @flag is set inconsistently across the sets
+ *   * -ENOENT if kfunc_btf_id is not a registered kfunc
+ */
+int btf_kfunc_check_flag(const struct btf *btf, u32 kfunc_btf_id, u32 flag)
+{
+	enum btf_kfunc_hook hook;
+	int res = -ENOENT;
+	bool is_set;
+	u32 *flags;
+
+	for (hook = 0; hook < BTF_KFUNC_HOOK_MAX; hook++) {
+		flags = btf_kfunc_id_set_contains(btf, hook, kfunc_btf_id);
+		if (!flags)
+			continue;
+		is_set = *flags & flag;
+		if (res < 0)
+			res = is_set;
+		else if (res != is_set)
+			return -EINVAL;
+	}
+
+	return res;
 }
 
 u32 *btf_kfunc_is_modify_return(const struct btf *btf, u32 kfunc_btf_id,
