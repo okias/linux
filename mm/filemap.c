@@ -3235,6 +3235,7 @@ loff_t mapping_seek_hole_data(struct address_space *mapping, loff_t start,
 	while ((folio = find_get_entry(&xas, max, XA_PRESENT))) {
 		loff_t pos = (u64)xas.xa_index << PAGE_SHIFT;
 		size_t seek_size;
+		u64 next;
 
 		if (start < pos) {
 			if (!seek_data)
@@ -3243,7 +3244,11 @@ loff_t mapping_seek_hole_data(struct address_space *mapping, loff_t start,
 		}
 
 		seek_size = seek_folio_size(&xas, folio);
-		pos = round_up((u64)pos + 1, seek_size);
+		next = round_up((u64)pos + 1, seek_size);
+		if (next > (u64)end)
+			pos = end;
+		else
+			pos = next;
 		start = folio_seek_hole_data(&xas, mapping, folio, start, pos,
 				seek_data);
 		if (start < pos)
@@ -3412,8 +3417,8 @@ static struct file *do_sync_mmap_readahead(struct vm_fault *vmf)
 		 * of memory.
 		 */
 		struct vm_area_struct *vma = vmf->vma;
-		unsigned long start = vma->vm_pgoff;
-		unsigned long end = start + vma_pages(vma);
+		const unsigned long start = vma_start_pgoff(vma);
+		const unsigned long end = vma_end_pgoff(vma);
 		unsigned long ra_end;
 
 		ra->order = exec_folio_order();
@@ -3931,7 +3936,8 @@ vm_fault_t filemap_map_pages(struct vm_fault *vmf,
 		goto out;
 	}
 
-	addr = vma->vm_start + ((start_pgoff - vma->vm_pgoff) << PAGE_SHIFT);
+	addr = vma->vm_start +
+		((start_pgoff - vma_start_pgoff(vma)) << PAGE_SHIFT);
 	vmf->pte = pte_offset_map_lock(vma->vm_mm, vmf->pmd, addr, &vmf->ptl);
 	if (!vmf->pte) {
 		folio_unlock(folio);
