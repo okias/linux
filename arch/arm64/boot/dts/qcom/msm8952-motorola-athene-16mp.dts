@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright David Heidelberg <david@ixit.cz>
+ */
+
+/dts-v1/;
+
+#include "msm8952-motorola-athene-common.dtsi"
+
+/ {
+	model = "Motorola Moto G4 Plus";
+	compatible = "motorola,athene-16mp", "motorola,athene", "qcom,msm8952";
+
+	qcom,board-id = <0x41 0x81a0>, <0x41 0x81ad>;
+};
