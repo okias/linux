@@ -304,6 +304,13 @@ properties:
 
       - items:
           - enum:
+              - motorola,athene-13mp
+              - motorola,athene-16mp
+          - const: motorola,athene
+          - const: qcom,msm8952
+
+      - items:
+          - enum:
               - flipkart,rimob
               - motorola,potter
               - xiaomi,daisy
