@@ -728,11 +728,11 @@ config MSM_MMCC_8974
 	  graphics, video encode/decode, camera, etc.
 
 config MSM_GCC_8976
-	tristate "MSM8956/76 Global Clock Controller"
+	tristate "MSM8952/56/76 Global Clock Controller"
 	select QCOM_GDSC
 	default ARCH_QCOM if ARM64
 	help
-	  Support for the global clock controller on msm8956/76 devices.
+	  Support for the global clock controller on msm8952/56/76 devices.
 	  Say Y if you want to use peripheral devices such as UART, SPI,
 	  i2c, USB, SD/eMMC, SATA, PCIe, etc.
 

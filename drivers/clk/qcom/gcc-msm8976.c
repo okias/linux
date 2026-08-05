@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Qualcomm Global Clock Controller driver for MSM8956/76
+ * Qualcomm Global Clock Controller driver for MSM8952/56/76
  *
  * Copyright (c) 2016-2021, AngeloGioacchino Del Regno
  *                     <angelogioacchino.delregno@somainline.org>
@@ -1333,6 +1333,40 @@ static struct clk_rcg2 mdp_clk_src = {
 		.num_parents = ARRAY_SIZE(gcc_parent_data_7_mdp),
 		.ops = &clk_rcg2_ops,
 	},
+};
+
+/*
+ * MSM8952 reaches GPLL0 through the main mux input rather than the dedicated
+ * MDP one, has no GPLL6 input on this RCG and tops out at 320 MHz.
+ */
+static const struct parent_map gcc_parent_map_7_mdp_msm8952[] = {
+	{ P_XO, 0 },
+	{ P_GPLL0_OUT_MDP, 1 },
+};
+
+static const struct clk_parent_data gcc_parent_data_7_mdp_msm8952[] = {
+	{ .fw_name = "xo" },
+	{ .hw = &gpll0_vote.hw },
+};
+
+static const struct freq_tbl ftbl_mdp_clk_src_msm8952[] = {
+	F(50000000, P_GPLL0_OUT_MDP, 16, 0, 0),
+	F(80000000, P_GPLL0_OUT_MDP, 10, 0, 0),
+	F(100000000, P_GPLL0_OUT_MDP, 8, 0, 0),
+	F(145454545, P_GPLL0_OUT_MDP, 5.5, 0, 0),
+	F(160000000, P_GPLL0_OUT_MDP, 5, 0, 0),
+	F(177777778, P_GPLL0_OUT_MDP, 4.5, 0, 0),
+	F(200000000, P_GPLL0_OUT_MDP, 4, 0, 0),
+	F(266666667, P_GPLL0_OUT_MDP, 3, 0, 0),
+	F(320000000, P_GPLL0_OUT_MDP, 2.5, 0, 0),
+	{ }
+};
+
+static const struct clk_init_data mdp_clk_src_init_msm8952 = {
+	.name = "mdp_clk_src",
+	.parent_data = gcc_parent_data_7_mdp_msm8952,
+	.num_parents = ARRAY_SIZE(gcc_parent_data_7_mdp_msm8952),
+	.ops = &clk_rcg2_ops,
 };
 
 static struct clk_rcg2 pclk0_clk_src = {
@@ -4091,6 +4125,7 @@ static const struct qcom_cc_desc gcc_msm8976_desc = {
 };
 
 static const struct of_device_id gcc_msm8976_match_table[] = {
+	{ .compatible = "qcom,gcc-msm8952" },
 	{ .compatible = "qcom,gcc-msm8976" }, /* Also valid for 8x56 */
 	{ .compatible = "qcom,gcc-msm8976-v1.1" },
 	{ }
@@ -4101,6 +4136,20 @@ static int gcc_msm8976_probe(struct platform_device *pdev)
 {
 	struct regmap *regmap;
 	int ret;
+
+	if (of_device_is_compatible(pdev->dev.of_node, "qcom,gcc-msm8952")) {
+		mdp_clk_src.parent_map = gcc_parent_map_7_mdp_msm8952;
+		mdp_clk_src.freq_tbl = ftbl_mdp_clk_src_msm8952;
+		mdp_clk_src.clkr.hw.init = &mdp_clk_src_init_msm8952;
+
+		/*
+		 * GPLL4 reports having been enabled by the voting FSM through
+		 * the active flag in its mode register rather than through the
+		 * lock detector in the status register.
+		 */
+		gpll4.status_reg = 0x24000;
+		gpll4.status_bit = 30;
+	}
 
 	if (of_device_is_compatible(pdev->dev.of_node, "qcom,gcc-msm8976-v1.1")) {
 		sdcc1_apps_clk_src.parent_map = gcc_parent_map_v1_1;
