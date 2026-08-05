@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/panel/motorola,athene-panel.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Motorola Moto G4 Plus (athene) DSI Display Panel
+
+maintainers:
+  - David Heidelberg <david@ixit.cz>
+
+description:
+  Motorola Moto G4 Plus ships with either an LG Display or a BOE 5.46"
+  1080x1920 DSI command mode panel. Both are driven with the same
+  initialization sequence and differ only in the default brightness level,
+  so a single compatible based on the board name "athene" is used.
+
+allOf:
+  - $ref: panel-common.yaml#
+
+properties:
+  compatible:
+    const: motorola,athene-panel
+
+  reg:
+    maxItems: 1
+
+  vddio-supply:
+    description: Regulator for the 1.8V IO supply.
+
+  vsp-supply:
+    description: Regulator for the positive panel supply.
+
+  vsn-supply:
+    description: Regulator for the negative panel supply.
+
+  backlight: true
+  port: true
+  reset-gpios: true
+
+required:
+  - compatible
+  - reg
+  - vddio-supply
+  - vsp-supply
+  - vsn-supply
+  - port
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    dsi {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        panel@0 {
+            compatible = "motorola,athene-panel";
+            reg = <0>;
+
+            reset-gpios = <&tlmm 0 GPIO_ACTIVE_LOW>;
+
+            vddio-supply = <&pm8950_l6>;
+            vsp-supply = <&lab>;
+            vsn-supply = <&ibb>;
+
+            backlight = <&backlight>;
+
+            port {
+                panel_in: endpoint {
+                    remote-endpoint = <&mdss_dsi0_out>;
+                };
+            };
+        };
+    };
+...
