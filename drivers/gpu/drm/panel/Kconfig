@@ -573,6 +573,17 @@ config DRM_PANEL_MANTIX_MLAF057WE51
 	  has a resolution of 720x1440 pixels, a built in backlight and touch
 	  controller.
 
+config DRM_PANEL_MOTOROLA_ATHENE
+	tristate "Motorola Moto G4 Plus 1080x1920 DSI command mode panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for the LCD panel module
+	  found in the Motorola Moto G4 Plus (athene). Depending on the unit
+	  it is manufactured by LG Display or BOE, both are 5.46" 1080x1920
+	  command mode panels driven by the same initialization sequence.
+
 config DRM_PANEL_MOTOROLA_MOT
 	tristate "Atrix 4G and Droid X2 540x960 DSI video mode panel"
 	depends on OF
