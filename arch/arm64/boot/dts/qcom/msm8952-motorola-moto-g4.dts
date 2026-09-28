@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * Copyright David Heidelberg <david@ixit.cz>
+ */
+
+/dts-v1/;
+
+#include "msm8952-motorola-moto-g4-common.dtsi"
+
+/ {
+	model = "Motorola Moto G4";
+	compatible = "motorola,moto-g4", "qcom,msm8952";
+
+	qcom,board-id = <0x42 0x81a0>, <0x42 0x81ad>;
+};
