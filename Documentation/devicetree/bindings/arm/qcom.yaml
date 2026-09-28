@@ -342,6 +342,8 @@ properties:
       - items:
           - enum:
               - generalmobile,shamrock
+              - motorola,moto-g4
+              - motorola,moto-g4-plus
           - const: qcom,msm8952
 
       - items:
